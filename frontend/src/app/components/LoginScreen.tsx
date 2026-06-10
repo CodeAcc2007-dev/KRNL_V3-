@@ -17,6 +17,24 @@ export function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    const errorCode = params.get("error_code");
+    const errorDescription = params.get("error_description");
+    if (oauthError) {
+      const msg =
+        errorCode === "unexpected_failure"
+          ? "Google sign-in failed: the server could not complete the OAuth exchange. Please check your Supabase Google provider configuration and try again."
+          : errorDescription
+          ? decodeURIComponent(errorDescription.replace(/\+/g, " "))
+          : "An unexpected error occurred during sign-in. Please try again.";
+      setError(msg);
+      // Clean up URL so error doesn't persist on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setError(null);
     setLoading(true);
