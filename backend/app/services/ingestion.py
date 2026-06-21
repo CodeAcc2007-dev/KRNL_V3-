@@ -119,12 +119,13 @@ def generate_embeddings(text: str) -> list:
         return [0.0] * 768
     try:
         response = genai_client.models.embed_content(
-            model="text-embedding-004",
-            contents=text.strip()
+            model="models/gemini-embedding-001",
+            contents=text.strip(),
+            config=types.EmbedContentConfig(output_dimensionality=768)
         )
-        if not response or not response.embedding or not response.embedding.values:
+        if not response or not response.embeddings or not response.embeddings[0].values:
             raise ValueError("Empty embedding response returned from Gemini API.")
-        return response.embedding.values
+        return response.embeddings[0].values
     except Exception as e:
         raise RuntimeError(f"Google GenAI Embedding service failed: {str(e)}")
 

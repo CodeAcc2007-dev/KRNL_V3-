@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { Menu, Calendar, AlertCircle, Tag, Star, Loader2 } from "lucide-react";
-import { motion } from "motion/react";
+import { useState, useEffect, useCallback } from "react";
+import { RefreshCw, Calendar, AlertCircle, Tag, Star, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { apiCall } from "../lib/api";
+import { EmailDetailScreen } from "./EmailDetailScreen";
 
 interface InboxScreenProps {
   onOpenSettings: () => void;
@@ -39,6 +40,48 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  // Refetch the prioritized events list (reused by initial load and Sync Now)
+  const refreshEvents = useCallback(async () => {
+    const eventsData = await apiCall("/api/v1/events");
+    setEvents(eventsData || []);
+  }, []);
+
+  // Trigger a sync, poll for completion if queued, then refresh the inbox
+  const handleSyncNow = useCallback(async () => {
+    if (syncing) return;
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await apiCall("/api/v1/sync/trigger", { method: "POST" });
+
+      // If the backend ran synchronously (no Celery), it's already done.
+      if (res?.status === "triggered" && res?.task_id) {
+        // Poll task status up to ~2.5 min (sync throttles ~13s/email).
+        for (let i = 0; i < 50; i++) {
+          await new Promise((r) => setTimeout(r, 3000));
+          try {
+            const st = await apiCall(`/api/v1/sync/status/${res.task_id}`);
+            if (st?.status === "SUCCESS" || st?.status === "FAILURE") break;
+          } catch {
+            // status endpoint hiccup — keep waiting
+          }
+        }
+      }
+
+      await refreshEvents();
+      setSyncMsg("Inbox synced");
+    } catch (err: any) {
+      console.error("Sync failed:", err);
+      setSyncMsg("Sync failed — try again");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMsg(null), 3000);
+    }
+  }, [syncing, refreshEvents]);
 
   useEffect(() => {
     async function loadInboxData() {
@@ -55,8 +98,7 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
         }
 
         // 2. Fetch user's prioritized events
-        const eventsData = await apiCall("/api/v1/events");
-        setEvents(eventsData || []);
+        await refreshEvents();
         setError(null);
       } catch (err: any) {
         console.error("Failed to load inbox data:", err);
@@ -144,7 +186,6 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
       // Show high importance or high priority items
       return (
         (ev.personalized_priority && ev.personalized_priority >= 70) ||
-        (ev.importance_score && ev.importance_score >= 0.7) ||
         (ev.category && ev.category.toLowerCase() === "important")
       );
     }
@@ -163,12 +204,25 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
       <div style={{ paddingTop: 48 }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-4">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={handleSyncNow}
+            disabled={syncing}
+            title="Sync now"
             className="flex items-center justify-center w-9 h-9 rounded-xl"
-            style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
+            style={{
+              background: "#1c1c21",
+              border: "1px solid #2d2d34",
+              cursor: syncing ? "default" : "pointer",
+            }}
           >
-            <Menu size={18} color="#8a8f98" strokeWidth={1.8} />
-          </button>
+            <RefreshCw
+              size={18}
+              color={syncing ? "#6366f1" : "#8a8f98"}
+              strokeWidth={1.8}
+              className={syncing ? "animate-spin" : ""}
+            />
+          </motion.button>
 
           <span
             className="tracking-[0.2em] uppercase"
@@ -190,6 +244,32 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
             />
           </button>
         </div>
+
+        {/* Sync status toast */}
+        <AnimatePresence>
+          {(syncing || syncMsg) && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="flex items-center gap-2 mx-4 mb-3 px-3 py-2"
+              style={{
+                background: "#1c1c21",
+                border: "1px solid #2d2d34",
+                borderRadius: 12,
+              }}
+            >
+              {syncing ? (
+                <Loader2 size={13} color="#6366f1" className="animate-spin" />
+              ) : (
+                <RefreshCw size={13} color="#10b981" strokeWidth={2} />
+              )}
+              <span style={{ color: "#8a8f98", fontSize: 12 }}>
+                {syncing ? "Syncing your inbox…" : syncMsg}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Filter Pills */}
         <div className="flex gap-2 px-4 pb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
@@ -247,6 +327,8 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.4), duration: 0.3 }}
                 className="flex items-center gap-3 px-3 py-3.5 cursor-pointer"
+                onClick={() => setSelectedEventId(email.id)}
+                whileTap={{ scale: 0.98 }}
                 style={{
                   background: "#1c1c21",
                   border: "1px solid #2d2d34",
@@ -343,6 +425,32 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
           })
         )}
       </div>
+
+      {/* Email Detail Overlay */}
+      <AnimatePresence>
+        {selectedEventId !== null && (() => {
+          const selectedEvent = events.find((e) => e.id === selectedEventId);
+          return (
+            <EmailDetailScreen
+              eventId={selectedEventId}
+              previewData={
+                selectedEvent
+                  ? {
+                      display_name: selectedEvent.display_name,
+                      raw_summary: selectedEvent.raw_summary,
+                      category: selectedEvent.category,
+                      importance_score: selectedEvent.importance_score,
+                      personalized_priority: selectedEvent.personalized_priority,
+                      deadline: selectedEvent.deadline,
+                      created_at: selectedEvent.created_at,
+                    }
+                  : undefined
+              }
+              onBack={() => setSelectedEventId(null)}
+            />
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }

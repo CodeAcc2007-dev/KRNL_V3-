@@ -4,14 +4,17 @@ from app.core.celery_app import celery_app
 from app.tasks.sync_task import run_email_sync
 from celery.result import AsyncResult
 from typing import List, Dict, Any
+import logging
 
+logger = logging.getLogger("uvicorn.error")
 router = APIRouter()
 
 @router.post("/sync/trigger", status_code=status.HTTP_202_ACCEPTED)
 def trigger_sync(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Finds active connected accounts for the user, triggers the Celery email sync task,
-    and returns the task_id immediately.
+    and returns the task_id immediately. If Celery/Redis is down, falls back to
+    synchronous execution.
     """
     user_id = current_user["user_id"]
     try:
@@ -34,13 +37,28 @@ def trigger_sync(current_user: dict = Depends(get_current_user)) -> Dict[str, An
         )
         
     task_ids = []
+    fallback_executed = False
     for account in active_accounts:
-        # Trigger Celery task asynchronously
-        task = run_email_sync.delay(user_id, account["id"])
-        task_ids.append(task.id)
+        try:
+            # Trigger Celery task asynchronously
+            task = run_email_sync.delay(user_id, account["id"])
+            task_ids.append(task.id)
+        except Exception as e:
+            logger.warning(f"Failed to queue celery task for account {account['id']}: {e}. Falling back to sync execution.")
+            try:
+                # Fallback to synchronous run using .apply(). Cap emails low so the
+                # blocking request returns quickly (13s/email throttle) instead of timing out.
+                run_email_sync.apply(args=[user_id, account["id"], 3])
+                fallback_executed = True
+            except Exception as sync_err:
+                logger.error(f"Synchronous fallback sync failed: {sync_err}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Email sync failed: {str(sync_err)}"
+                )
         
     return {
-        "status": "triggered",
+        "status": "completed" if fallback_executed else "triggered",
         "task_id": task_ids[0] if task_ids else None,
         "task_ids": task_ids
     }

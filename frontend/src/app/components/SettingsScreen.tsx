@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, RefreshCw, Mail, ChevronRight, AlertTriangle, Info, Shield, Check, LogOut, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, Mail, ChevronRight, AlertTriangle, Info, Shield, Check, LogOut, Trash2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
@@ -31,6 +31,44 @@ export function SettingsScreen() {
   const [deletionInput, setDeletionInput] = useState("");
   const [confirmDeleteLoading, setConfirmDeleteLoading] = useState(false);
 
+  // Connected Accounts State
+  interface ConnectedAccount {
+    id: number;
+    account_type: string;
+    email_address: string;
+    imap_username?: string;
+    connection_status: string;
+    last_synced_at?: string;
+    created_at: string;
+  }
+
+  const [connectedAccounts, setConnectedAccounts] = useState<ConnectedAccount[]>([]);
+  const [accountsLoading, setAccountsLoading] = useState(true);
+  const [confirmDeleteAccountId, setConfirmDeleteAccountId] = useState<number | null>(null);
+
+  // Connect Modal state
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [ldapEmail, setLdapEmail] = useState("");
+  const [ldapUsername, setLdapUsername] = useState("");
+  const [ldapPassword, setLdapPassword] = useState("");
+  const [connectionLoading, setConnectionLoading] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  const fetchAccounts = async () => {
+    try {
+      setAccountsLoading(true);
+      const res = await apiFetch("/api/v1/accounts");
+      if (res.ok) {
+        const data = await res.json();
+        setConnectedAccounts(data);
+      }
+    } catch (err) {
+      console.error("Error fetching accounts:", err);
+    } finally {
+      setAccountsLoading(false);
+    }
+  };
+
   const checkDeletionStatus = async () => {
     try {
       const res = await apiFetch("/api/v1/user/delete-request");
@@ -54,6 +92,7 @@ export function SettingsScreen() {
       if (session?.user) {
         setEmail(session.user.email || null);
         checkDeletionStatus();
+        fetchAccounts();
       }
     });
 
@@ -61,8 +100,10 @@ export function SettingsScreen() {
       if (session?.user) {
         setEmail(session.user.email || null);
         checkDeletionStatus();
+        fetchAccounts();
       } else {
         setEmail(null);
+        setConnectedAccounts([]);
       }
     });
 
@@ -160,6 +201,74 @@ export function SettingsScreen() {
     setSelectedTracks((prev) =>
       prev.includes(track) ? prev.filter((t) => t !== track) : [...prev, track]
     );
+  };
+
+  const handleDeleteAccount = async (accountId: number) => {
+    setConfirmDeleteAccountId(accountId);
+  };
+
+  const executeDeleteAccount = async () => {
+    if (confirmDeleteAccountId === null) return;
+    setConfirmDeleteLoading(true);
+    try {
+      const res = await apiFetch(`/api/v1/accounts/${confirmDeleteAccountId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setConnectedAccounts((prev) => prev.filter((acc) => acc.id !== confirmDeleteAccountId));
+        setConfirmDeleteAccountId(null);
+      } else {
+        const errData = await res.json();
+        alert(errData.detail || "Failed to disconnect account.");
+      }
+    } catch (err) {
+      console.error("Error deleting account:", err);
+      alert("An error occurred while disconnecting the account.");
+    } finally {
+      setConfirmDeleteLoading(false);
+    }
+  };
+
+  const handleConnectIITB = async () => {
+    setConnectionLoading(true);
+    setConnectionError(null);
+    try {
+      const res = await apiFetch("/api/v1/accounts/iitb", {
+        method: "POST",
+        body: JSON.stringify({
+          email_address: ldapEmail,
+          imap_username: ldapUsername,
+          sso_token: ldapPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Refresh accounts list
+        await fetchAccounts();
+        
+        // Trigger initial sync asynchronously (don't block the UI if celery is down)
+        try {
+          await apiFetch("/api/v1/sync/trigger", { method: "POST" });
+        } catch (syncErr) {
+          console.warn("Failed to trigger initial sync:", syncErr);
+        }
+
+        // Reset inputs and close modal
+        setLdapEmail("");
+        setLdapUsername("");
+        setLdapPassword("");
+        setShowConnectModal(false);
+      } else {
+        setConnectionError(data.detail || "Failed to connect account. Please check your credentials.");
+      }
+    } catch (err) {
+      console.error("Connection error:", err);
+      setConnectionError("A network error occurred. Please check if the server is running.");
+    } finally {
+      setConnectionLoading(false);
+    }
   };
 
 
@@ -272,70 +381,151 @@ export function SettingsScreen() {
             </span>
           </div>
 
-          {/* Connected Account */}
-          <div
-            className="flex items-center gap-3 px-4 py-3.5 mb-2"
-            style={{
-              background: "#1c1c21",
-              border: "1px solid #2d2d34",
-              borderRadius: 16,
-            }}
-          >
+          {accountsLoading ? (
+            <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#8a8f98]">
+              <Loader2 className="animate-spin" size={20} />
+              <span style={{ fontSize: 11 }}>Loading accounts...</span>
+            </div>
+          ) : connectedAccounts.length === 0 ? (
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)" }}
+              className="flex items-center justify-center px-4 py-6 mb-3"
+              style={{
+                background: "#1c1c21",
+                border: "1px dashed #2d2d34",
+                borderRadius: 16,
+              }}
             >
-              <Mail size={18} color="#10b981" strokeWidth={1.8} />
+              <span style={{ color: "#8a8f98", fontSize: 13 }}>No connected email accounts.</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <span
-                className="block truncate"
-                style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}
-              >
-                ldap_username@iitb.ac.in
-              </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
+          ) : (
+            connectedAccounts.map((account) => {
+              const lastSyncedText = account.last_synced_at
+                ? (() => {
+                    try {
+                      const diffMs = new Date().getTime() - new Date(account.last_synced_at).getTime();
+                      const diffMins = Math.floor(diffMs / 60000);
+                      if (diffMins < 60) return `Synced ${diffMins}m ago`;
+                      const diffHours = Math.floor(diffMins / 60);
+                      if (diffHours < 24) return `Synced ${diffHours}h ago`;
+                      return `Synced ${Math.floor(diffHours / 24)}d ago`;
+                    } catch {
+                      return "Never synced";
+                    }
+                  })()
+                : "Never synced";
+
+              return (
                 <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: "#10b981", boxShadow: "0 0 5px #10b981" }}
-                />
-                <RefreshCw size={10} color="#10b981" strokeWidth={2} />
-                <span style={{ color: "#10b981", fontSize: 11 }}>Synced 2m ago</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
+                  key={account.id}
+                  className="flex items-center gap-3 px-4 py-3.5 mb-2"
+                  style={{
+                    background: "#1c1c21",
+                    border: "1px solid #2d2d34",
+                    borderRadius: 16,
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: "rgba(16,185,129,0.1)",
+                      border: "1px solid rgba(16,185,129,0.2)",
+                    }}
+                  >
+                    <Mail size={18} color="#10b981" strokeWidth={1.8} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className="block truncate"
+                      style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}
+                    >
+                      {account.email_address}
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{
+                          background: account.connection_status === "connected" ? "#10b981" : "#ef4444",
+                          boxShadow:
+                            account.connection_status === "connected"
+                              ? "0 0 5px #10b981"
+                              : "0 0 5px #ef4444",
+                        }}
+                      />
+                      <RefreshCw size={10} color="#10b981" strokeWidth={2} />
+                      <span style={{ color: "#10b981", fontSize: 11 }}>{lastSyncedText}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="px-2.5 py-1"
+                      style={{
+                        background: "rgba(16,185,129,0.1)",
+                        border: "1px solid rgba(16,185,129,0.25)",
+                        borderRadius: 8,
+                      }}
+                    >
+                      <span style={{ color: "#10b981", fontSize: 10, fontWeight: 700 }}>
+                        {account.account_type === "iitb_imap" ? "IITB" : "GMAIL"}
+                      </span>
+                    </div>
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleDeleteAccount(account.id)}
+                      className="p-1 rounded hover:bg-red-500/10 transition-colors"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <Trash2 size={14} color="#f87171" />
+                    </motion.button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          <div className="flex flex-col gap-2 mt-3">
+            {/* Add IITB Webmail */}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setShowConnectModal(true);
+                setConnectionError(null);
+              }}
+              className="w-full flex items-center justify-center gap-2.5 py-4"
+              style={{
+                background: "transparent",
+                border: "1.5px dashed #2d2d34",
+                borderRadius: 16,
+                cursor: "pointer",
+              }}
+            >
               <div
-                className="px-2.5 py-1"
-                style={{
-                  background: "rgba(16,185,129,0.1)",
-                  border: "1px solid rgba(16,185,129,0.25)",
-                  borderRadius: 8,
-                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
               >
-                <span style={{ color: "#10b981", fontSize: 10, fontWeight: 700 }}>IITB</span>
+                <Plus size={14} color="#8a8f98" strokeWidth={2} />
               </div>
-              <ChevronRight size={14} color="#2d2d34" strokeWidth={2} />
+              <span style={{ color: "#8a8f98", fontSize: 13 }}>Connect IITB Webmail</span>
+            </motion.button>
+
+            {/* Add Gmail (disabled) */}
+            <div
+              className="w-full flex items-center justify-center gap-2.5 py-4 opacity-50"
+              style={{
+                background: "transparent",
+                border: "1.5px dashed #2d2d34",
+                borderRadius: 16,
+                cursor: "not-allowed",
+              }}
+            >
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center"
+                style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
+              >
+                <Plus size={14} color="#8a8f98" strokeWidth={2} />
+              </div>
+              <span style={{ color: "#8a8f98", fontSize: 13 }}>Connect Gmail (Coming Soon)</span>
             </div>
           </div>
-
-          {/* Add Gmail */}
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            className="w-full flex items-center justify-center gap-2.5 py-4"
-            style={{
-              background: "transparent",
-              border: "1.5px dashed #2d2d34",
-              borderRadius: 16,
-            }}
-          >
-            <div
-              className="w-7 h-7 rounded-full flex items-center justify-center"
-              style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
-            >
-              <Plus size={14} color="#8a8f98" strokeWidth={2} />
-            </div>
-            <span style={{ color: "#8a8f98", fontSize: 13 }}>Add Gmail Account</span>
-          </motion.button>
         </div>
 
         {/* Block 2: Career Track Preferences */}
@@ -619,6 +809,246 @@ export function SettingsScreen() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* IITB Connection Modal */}
+      <AnimatePresence>
+        {showConnectModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="w-full max-w-md p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
+              style={{
+                background: "#0e0f11",
+                border: "1px solid #2d2d34",
+                borderRadius: 24,
+              }}
+            >
+              <h3 style={{ color: "#f7f8f8", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+                Connect IITB Webmail
+              </h3>
+              <p style={{ color: "#8a8f98", fontSize: 13, marginBottom: 20 }}>
+                Link your IIT Bombay LDAP account to sync academic emails.
+              </p>
+
+              {connectionError && (
+                <div
+                  className="mb-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs flex gap-2 items-start"
+                >
+                  <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>{connectionError}</span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                    Webmail Email Address
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="ldap_username@iitb.ac.in"
+                    value={ldapEmail}
+                    onChange={(e) => {
+                      setLdapEmail(e.target.value);
+                      // Auto-fill username if email has @iitb.ac.in
+                      const parts = e.target.value.split("@");
+                      if (parts.length > 0 && parts[1] === "iitb.ac.in" && !ldapUsername) {
+                        setLdapUsername(parts[0]);
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      color: "#ffffff",
+                      background: "#1c1c21",
+                      border: "1px solid #2d2d34",
+                      borderRadius: 12,
+                      outline: "none",
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                    LDAP Username
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 25b2164"
+                    value={ldapUsername}
+                    onChange={(e) => setLdapUsername(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      color: "#ffffff",
+                      background: "#1c1c21",
+                      border: "1px solid #2d2d34",
+                      borderRadius: 12,
+                      outline: "none",
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                    LDAP Password / Access Token
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={ldapPassword}
+                    onChange={(e) => setLdapPassword(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      color: "#ffffff",
+                      background: "#1c1c21",
+                      border: "1px solid #2d2d34",
+                      borderRadius: 12,
+                      outline: "none",
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => {
+                    setShowConnectModal(false);
+                    setLdapEmail("");
+                    setLdapUsername("");
+                    setLdapPassword("");
+                    setConnectionError(null);
+                  }}
+                  disabled={connectionLoading}
+                  className="flex-1 py-3"
+                  style={{
+                    background: "#1c1c21",
+                    border: "1px solid #2d2d34",
+                    borderRadius: 12,
+                    color: "#8a8f98",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: connectionLoading ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleConnectIITB}
+                  disabled={connectionLoading || !ldapEmail || !ldapUsername || !ldapPassword}
+                  className="flex-1 py-3 flex items-center justify-center gap-2"
+                  style={{
+                    background: (ldapEmail && ldapUsername && ldapPassword) ? "#6366f1" : "rgba(99,102,241,0.2)",
+                    borderRadius: 12,
+                    color: (ldapEmail && ldapUsername && ldapPassword) ? "#ffffff" : "rgba(255,255,255,0.4)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: (connectionLoading || !ldapEmail || !ldapUsername || !ldapPassword) ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {connectionLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Connect</span>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Disconnect Confirmation Modal */}
+      <AnimatePresence>
+        {confirmDeleteAccountId !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="w-full max-w-sm p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
+              style={{
+                background: "#0e0f11",
+                border: "1px solid #2d2d34",
+                borderRadius: 24,
+              }}
+            >
+              <h3 style={{ color: "#f87171", fontSize: 16, fontWeight: 700, marginBottom: 8 }} className="flex items-center gap-2">
+                <AlertTriangle size={18} />
+                Disconnect Account?
+              </h3>
+              <p style={{ color: "#8a8f98", fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
+                Are you sure you want to disconnect this email account? This will stop future email syncs.
+              </p>
+
+              <div className="flex gap-3">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setConfirmDeleteAccountId(null)}
+                  disabled={confirmDeleteLoading}
+                  className="flex-1 py-3"
+                  style={{
+                    background: "#1c1c21",
+                    border: "1px solid #2d2d34",
+                    borderRadius: 12,
+                    color: "#8a8f98",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={executeDeleteAccount}
+                  disabled={confirmDeleteLoading}
+                  className="flex-1 py-3 flex items-center justify-center gap-2"
+                  style={{
+                    background: "rgba(239,68,68,0.15)",
+                    border: "1px solid rgba(239,68,68,0.4)",
+                    borderRadius: 12,
+                    color: "#f87171",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
+                  }}
+                >
+                  {confirmDeleteLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Disconnecting...</span>
+                    </>
+                  ) : (
+                    <span>Disconnect</span>
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

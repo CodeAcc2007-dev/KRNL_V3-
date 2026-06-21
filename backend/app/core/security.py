@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from supabase import create_client, Client
 from app.core.config import settings
 
-supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 security = HTTPBearer()
 

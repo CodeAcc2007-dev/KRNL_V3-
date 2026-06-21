@@ -16,17 +16,21 @@ from app.services.ingestion import (
 )
 from qdrant_client.http import models as qdrant_models
 
-logger = logging.getLogger("celery")
+logger = logging.getLogger("uvicorn.error")
 
 # Initialize service client for tasks bypass
 supabase_service = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 @shared_task(bind=True, name="app.tasks.sync_task.run_email_sync", max_retries=3)
-def run_email_sync(self, user_id: str, account_id: int):
+def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
     """
     Celery task to run email synchronization.
+
+    max_emails caps how many messages are fetched per run. The synchronous
+    dev fallback (no Redis/Celery) passes a small value so the blocking HTTP
+    request returns quickly instead of timing out on the 13s-per-email throttle.
     """
-    logger.info(f"Starting email sync task for user {user_id}, account {account_id}")
+    logger.info(f"Starting email sync task for user {user_id}, account {account_id} (max_emails={max_emails})")
     
     try:
         # 1. Query connected_accounts using the service role key
@@ -63,11 +67,11 @@ def run_email_sync(self, user_id: str, account_id: int):
             if criteria != 'ALL':
                 logger.info(f"Fetching new emails since date {criteria}...")
                 messages = list(mailbox.fetch(criteria, reverse=True))
-                if len(messages) > 10:
-                    messages = messages[:10]
+                if len(messages) > max_emails:
+                    messages = messages[:max_emails]
             else:
-                logger.info("Fetching last 10 emails from inbox...")
-                messages = list(mailbox.fetch(limit=10, reverse=True))
+                logger.info(f"Fetching last {max_emails} emails from inbox...")
+                messages = list(mailbox.fetch(limit=max_emails, reverse=True))
                 
             logger.info(f"Found {len(messages)} emails to process.")
             
@@ -96,8 +100,8 @@ def run_email_sync(self, user_id: str, account_id: int):
                     "deadline": extracted.get("deadline"),
                     "venue": extracted.get("venue"),
                     "category": extracted.get("category") or "General",
-                    "tags": extracted.get("tags") or [],
-                    "importance_score": extracted.get("importance_score") or 0.1,
+                    "tags": ", ".join(extracted.get("tags") or []) if isinstance(extracted.get("tags"), list) else (extracted.get("tags") or ""),
+                    "importance_score": int((extracted.get("importance_score") or 0.1) * 100),
                     "raw_summary": extracted.get("raw_summary") or "",
                     "full_body": clean_email_body(body),
                     "raw_body": body,
@@ -165,4 +169,7 @@ def run_email_sync(self, user_id: str, account_id: int):
         
     except Exception as exc:
         logger.error(f"Exception during email sync: {exc}")
+        # If running synchronously, do not retry, just raise the exception
+        if not getattr(self, "request", None) or getattr(self.request, "called_directly", True):
+            raise exc
         raise self.retry(exc=exc, countdown=60)

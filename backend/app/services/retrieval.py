@@ -22,9 +22,9 @@ def hybrid_retrieval(query: str, user_id: str, limit: int = 5) -> list[dict]:
 
     def search_qdrant():
         try:
-            res = qdrant_client.search(
+            res = qdrant_client.query_points(
                 collection_name="krnl_email_chunks",
-                query_vector=query_vector,
+                query=query_vector,
                 query_filter=qdrant_models.Filter(
                     must=[
                         qdrant_models.FieldCondition(
@@ -35,14 +35,14 @@ def hybrid_retrieval(query: str, user_id: str, limit: int = 5) -> list[dict]:
                 ),
                 limit=limit * 2
             )
-            return res
+            return res.points
         except Exception as e:
             logger.error(f"Qdrant vector search failed in hybrid_retrieval: {e}")
             return []
 
     def search_supabase():
         try:
-            res = supabase.table("events").select("*").eq("user_id", user_id).text_search("full_body", query, config="english").execute()
+            res = supabase.table("events").select("*").eq("user_id", user_id).text_search("full_body", query, options={"config": "english"}).execute()
             return res.data or []
         except Exception as e:
             logger.warning(f"Supabase text_search failed: {e}. Falling back to ilike search...")
