@@ -6,7 +6,31 @@ _Last updated: 2026-06-21_
 
 ## 📍 SESSION PROGRESS LOG (read this first on resume)
 
-### ✅ Phase 0 — DONE & verified (NOT yet committed; working tree only)
+### ✅ Phase 1 — code DONE (branch `phase-1-quota-data-integrity`); TWO manual steps left
+Implemented test-first (11 passing unit tests in `backend/tests/`):
+- **`message_id` dedup.** New `backend/app/utils/dedup.py::get_message_id(msg)` (RFC
+  Message-ID header, `uid:` fallback). `sync_task` loads the user's existing `message_id`s,
+  skips already-ingested mail (saves Gemini quota), and treats a unique-constraint
+  violation on insert as a no-op skip.
+- **Batch embeddings.** `ingestion.generate_embeddings_batch(texts)` = ONE Gemini call per
+  email (blank chunks → zero vector, index-aligned). `sync_task` uses it instead of
+  per-chunk `generate_embeddings` (still used by retrieval/semantic_cache for single query).
+- **Extraction update signals.** `EmailExtractionModel` + fallback now emit
+  `is_update: bool` and `update_type` (deadline_extension/reminder/venue_change/…); stored
+  as `events.last_update_type`. (Phase 1.5 acts on these.)
+- **Migration file `backend/phase1_dedup_migration.sql`** adds `message_id`,
+  `deadline_history jsonb`, `last_update_type`, and a partial unique index
+  `(user_id, message_id) WHERE message_id IS NOT NULL` (NULLs distinct → no conflict with
+  legacy rows).
+- **Cleanup `backend/scripts/cleanup_duplicates.py`** (dry-run default). Dedups by
+  `(user_id, display_name)`, keeps lowest id, deletes rest + orphaned Qdrant vectors.
+  Dry-run on current DB: 17 rows → would delete 4 (IPR id7; Internship 12,15; SSoC 17),
+  leaving 13. EnPoWER not flagged (distinct display_names — correct).
+- ⚠️ **MANUAL STEP 1:** run `phase1_dedup_migration.sql` in the Supabase SQL Editor.
+- ⚠️ **MANUAL STEP 2:** `python scripts/cleanup_duplicates.py --apply` (after reviewing the
+  dry-run) to remove the 4 legacy dupes.
+
+### ✅ Phase 0 — DONE & verified (committed on branch `phase-1-quota-data-integrity`)
 - **Ask KRNL fixed** — `backend/app/services/retrieval.py`:
   - `qdrant_client.search()` → `query_points(...).points` (installed client removed `.search()`).
   - `text_search("full_body", query, config="english")` → `text_search("full_body", query, options={"config": "english"})`.

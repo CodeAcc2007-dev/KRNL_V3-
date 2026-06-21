@@ -8,12 +8,13 @@ from supabase import create_client
 from app.core.config import settings
 from app.core.encryption import decrypt_token
 from app.services.ingestion import (
-    extract_event_intelligence, 
-    generate_embeddings, 
-    chunk_text, 
+    extract_event_intelligence,
+    generate_embeddings_batch,
+    chunk_text,
     clean_email_body,
     qdrant_client
 )
+from app.utils.dedup import get_message_id
 from qdrant_client.http import models as qdrant_models
 
 logger = logging.getLogger("uvicorn.error")
@@ -73,10 +74,30 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 logger.info(f"Fetching last {max_emails} emails from inbox...")
                 messages = list(mailbox.fetch(limit=max_emails, reverse=True))
                 
-            logger.info(f"Found {len(messages)} emails to process.")
-            
+            logger.info(f"Found {len(messages)} emails fetched.")
+
+            # Dedup: skip emails we've already ingested for this user. The DB has a
+            # unique (user_id, message_id) constraint as the hard guard; this set
+            # avoids wasting Gemini quota re-extracting messages we already have.
+            seen_message_ids = set()
+            try:
+                existing = supabase_service.table("events").select("message_id").eq("user_id", user_id).execute()
+                seen_message_ids = {row["message_id"] for row in (existing.data or []) if row.get("message_id")}
+                logger.info(f"User has {len(seen_message_ids)} previously-ingested message_ids.")
+            except Exception as e:
+                logger.warning(f"Could not load existing message_ids for dedup: {e}")
+
             emails_processed = 0
+            emails_skipped = 0
             for idx, msg in enumerate(messages):
+                message_id = get_message_id(msg)
+                if message_id in seen_message_ids:
+                    logger.info(f"Skipping already-ingested email {idx+1}/{len(messages)} (message_id={message_id})")
+                    emails_skipped += 1
+                    continue
+                # Reserve so duplicates within this same batch are also skipped.
+                seen_message_ids.add(message_id)
+
                 subject = msg.subject or "No Subject"
                 sender = msg.from_ or "Unknown Sender"
                 msg_date = msg.date.isoformat() if msg.date else datetime.utcnow().isoformat()
@@ -96,6 +117,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 
                 event_data = {
                     "user_id": user_id,
+                    "message_id": message_id,
                     "display_name": extracted.get("display_name") or subject,
                     "deadline": extracted.get("deadline"),
                     "venue": extracted.get("venue"),
@@ -107,9 +129,10 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                     "raw_body": body,
                     "links": links,
                     "has_registration": has_registration,
-                    "registration_link": registration_link
+                    "registration_link": registration_link,
+                    "last_update_type": extracted.get("update_type") if extracted.get("is_update") else None
                 }
-                
+
                 try:
                     event_response = supabase_service.table("events").insert(event_data).execute()
                     if event_response.data:
@@ -118,6 +141,12 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                         logger.error("Failed to insert event into database (empty return)")
                         continue
                 except Exception as e:
+                    # A unique (user_id, message_id) violation means a concurrent run
+                    # already ingested this email — that's a successful no-op, not an error.
+                    if "duplicate key" in str(e).lower() or "23505" in str(e):
+                        logger.info(f"Email already ingested by a concurrent run (message_id={message_id}); skipping.")
+                        emails_skipped += 1
+                        continue
                     logger.error(f"Failed to save event to database: {e}")
                     continue
                     
@@ -125,10 +154,13 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 try:
                     cleaned_body = clean_email_body(body)
                     chunks = chunk_text(cleaned_body, chunk_size=500, overlap=100)
-                    
+
+                    # One embedding API call for ALL chunks of this email (Phase 1
+                    # quota fix) instead of one call per chunk.
+                    embeddings = generate_embeddings_batch(chunks)
+
                     points = []
-                    for chunk_idx, chunk in enumerate(chunks):
-                        embedding = generate_embeddings(chunk)
+                    for chunk_idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
                         point_id = str(uuid.uuid4())
                         points.append(
                             qdrant_models.PointStruct(
@@ -164,8 +196,8 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
             "last_synced_at": datetime.utcnow().isoformat()
         }).eq("id", account_id).execute()
         
-        logger.info(f"Email sync completed successfully. Processed {emails_processed} emails.")
-        return {"status": "success", "processed": emails_processed}
+        logger.info(f"Email sync completed successfully. Processed {emails_processed}, skipped {emails_skipped} (already ingested).")
+        return {"status": "success", "processed": emails_processed, "skipped": emails_skipped}
         
     except Exception as exc:
         logger.error(f"Exception during email sync: {exc}")
