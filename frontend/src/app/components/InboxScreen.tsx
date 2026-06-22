@@ -20,6 +20,7 @@ interface EventItem {
   raw_summary?: string;
   created_at?: string;
   personalized_priority?: number;
+  last_update_type?: string | null;
 }
 
 const priorityColor = {
@@ -376,6 +377,20 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                 <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                   {/* Time */}
                   <span style={{ color: "#8a8f98", fontSize: 10 }}>{getTimeLabel(email.created_at)}</span>
+
+                  {email.last_update_type && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        color: "#60a5fa",
+                        background: "rgba(59,130,246,0.15)",
+                        borderRadius: 4,
+                        padding: "1px 6px",
+                      }}
+                    >
+                      Update
+                    </span>
+                  )}
 
                   {/* Deadline chip */}
                   {email.deadline && (

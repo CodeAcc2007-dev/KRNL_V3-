@@ -39,5 +39,6 @@ Columns: **what · where · why it exists · action before prod.**
 |---|---|---|---|
 | Ask KRNL mock Q&A | `AskKrnlScreen.tsx` | Removed in Phase 0 — verify none linger | Remove if any traces remain |
 | Hardcoded deadline fallback list | DeadlinesScreen.tsx (~lines 50-88) | shows demo data when /deadlines fails | Remove before prod or replace with empty state |
+| Hardcoded inbox fallback list | InboxScreen.tsx (~lines 112-139) | shows demo data when /events fails | Remove before prod or replace with empty state |
 
 _Add new rows here as work proceeds._
