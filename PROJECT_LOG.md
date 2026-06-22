@@ -23,28 +23,34 @@ at rest.
 ## Status at a glance
 
 - **Branch:** `phase-1-quota-data-integrity` (main = Initial commit, kept as rollback point).
-- **Done:** Phase 0 (broken-now fixes), Phase 1 (message_id dedup, batch embeddings,
-  is_update/update_type), duplicate cleanup applied (13 clean rows, 0 orphaned vectors).
-- **Next up:** deadline-extension intelligence on real Redis sync — spec approved, see
-  [docs/specs/2026-06-22-deadline-extension-sync-design.md](docs/specs/2026-06-22-deadline-extension-sync-design.md).
+- **Done:** Phase 0, Phase 1 (dedup, batch embeddings, is_update/update_type), duplicate
+  cleanup applied.
+- **Deadline-extension feature: CODE COMPLETE** (Tasks 2–8 of the plan, reviewed inline) —
+  `event_merge.py` (match via Qdrant + LLM confirm; forward-only apply + `deadline_history`),
+  wired into `sync_task`, API exposes new fields, frontend badge + Update tag. Plus a Qdrant
+  client `timeout=60` fix (see Issue A).
+- **PENDING (env-blocked):** the live 10–15 email E2E (plan Task 9) needs Docker/Redis +
+  a Celery worker. **Docker is not installed on this machine** — install Docker (or native
+  Redis) to run it. Also `docker-compose.yml` written but not started.
 - **Later:** Phase 3 auto-sync (Celery Beat), Phase 4 security, Phase 5 UX polish.
 
 ## Issues tracker
 
 | # | Issue | Status | Detail |
 |---|---|---|---|
-| A | Ask KRNL can't answer deadline questions (`query.py` drops structured `deadline` from LLM context) | OPEN | DEVELOPMENT_PLAN → "NEW open issues 2026-06-22" |
+| A | Ask KRNL can't answer deadline questions | OPEN (2 causes) | (1) `query.py` drops structured `deadline` from LLM context; (2) **Qdrant client had no timeout → intermittent SSL timeouts** (fixed `timeout=60` 2026-06-22, commit fc9530c) — likely the bigger cause of "not working fine" |
 | B | Internship email re-duplicates on re-sync | RESOLVED 2026-06-22 | Phase 1 message_id dedup + cleanup; see [session](docs/sessions/2026-06-22-phase1-dedup-and-planning.md) |
 | — | "Full Message" collapsible shows on only 1 mail | OPEN (investigate) | DEVELOPMENT_PLAN progress log |
 
 ## How to proceed (next session)
 
-1. Stand up Redis (Docker) + Celery worker; run a real 10–15 email sync (see the deadline
-   spec, Sections 2–3).
-2. Build deadline-extension merge (`app/services/event_merge.py`) + frontend badges.
-3. After the next sync, re-run `cleanup_duplicates.py --apply` once to clear the one-time
-   residual dup of legacy rows (NULL `message_id`).
-4. Then tackle Issue A (Ask KRNL deadlines).
+1. Install Docker (or native Redis), then `docker compose up -d` and run the Celery worker:
+   `cd backend && celery -A app.core.celery_app worker --concurrency=1 --loglevel=info`.
+2. Run the live E2E (plan Task 9): clear `last_synced_at`, dispatch a 15-email sync, watch
+   the worker log for dedup skips and `Applied deadline extension to event …`.
+3. After that sync, run `cleanup_duplicates.py --apply` once to clear the residual legacy
+   dup (NULL `message_id`).
+4. Tackle Issue A part 1 (`query.py` deadline context) now that the Qdrant timeout is fixed.
 
 ## Standing rules
 
