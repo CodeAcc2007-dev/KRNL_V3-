@@ -29,9 +29,17 @@ at rest.
   `event_merge.py` (match via Qdrant + LLM confirm; forward-only apply + `deadline_history`),
   wired into `sync_task`, API exposes new fields, frontend badge + Update tag. Plus a Qdrant
   client `timeout=60` fix (see Issue A).
-- **PENDING (env-blocked):** the live 10–15 email E2E (plan Task 9) needs Docker/Redis +
-  a Celery worker. **Docker is not installed on this machine** — install Docker (or native
-  Redis) to run it. Also `docker-compose.yml` written but not started.
+- **Async sync WORKS (2026-06-22).** Redis runs locally via **podman** (`podman run -d
+  --name krnl-redis --network=host redis:7-alpine` — Docker isn't installed; `--network=host`
+  avoids flaky rootless port-forwarding). Celery worker:
+  `cd backend && celery -A app.core.celery_app worker --concurrency=1 --loglevel=info`.
+  Verified: a dispatched sync fetched 7, skipped 3 (dedup), processed 4, succeeded.
+- **Fixed (commit bebf176):** Celery task registration — `autodiscover_tasks(['app.tasks'])`
+  looked for nonexistent `app/tasks/tasks.py`, so the worker never registered
+  `run_email_sync` (async dispatch failed "unregistered task"; sync fallback masked it).
+  Now `include=['app.tasks.sync_task','app.tasks.deletion_task']`.
+- **Residual dup:** that sync re-created the legacy NULL-`message_id` rows once (e.g.
+  Internship) — run `cleanup_duplicates.py --apply` once more, then it's idempotent.
 - **Later:** Phase 3 auto-sync (Celery Beat), Phase 4 security, Phase 5 UX polish.
 
 ## Issues tracker
