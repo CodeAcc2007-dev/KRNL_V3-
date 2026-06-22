@@ -3,7 +3,7 @@ import logging
 import uuid
 from datetime import datetime
 from celery import shared_task
-from imap_tools import MailBox, AND
+from imap_tools import MailBox
 from supabase import create_client
 from app.core.config import settings
 from app.core.encryption import decrypt_token
@@ -56,24 +56,15 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         # 3. Log into 'imap.iitb.ac.in' via imap_tools
         logger.info(f"Connecting to imap.iitb.ac.in for {imap_username}...")
         
-        criteria = 'ALL'
-        if last_synced_at:
-            try:
-                dt = datetime.fromisoformat(last_synced_at.replace('Z', '+00:00'))
-                # Filter for emails since last synced date
-                criteria = AND(date_gte=dt.date())
-            except Exception as e:
-                logger.warning(f"Failed to parse last_synced_at: {e}")
+        # Target-N sync: scan the newest `scan_limit` emails and keep going until
+        # `max_emails` NEW (not-already-ingested) emails are synced, skipping dups
+        # WITHOUT counting them toward the target. The message_id dedup decides what's
+        # new; last_synced_at no longer windows the fetch.
+        target_new = max_emails
+        scan_limit = max(target_new * 6, 60)
                 
         with MailBox('imap.iitb.ac.in').login(imap_username, decrypted_token, 'INBOX') as mailbox:
-            if criteria != 'ALL':
-                logger.info(f"Fetching new emails since date {criteria}...")
-                messages = list(mailbox.fetch(criteria, reverse=True))
-                if len(messages) > max_emails:
-                    messages = messages[:max_emails]
-            else:
-                logger.info(f"Fetching last {max_emails} emails from inbox...")
-                messages = list(mailbox.fetch(limit=max_emails, reverse=True))
+            messages = list(mailbox.fetch('ALL', reverse=True, limit=scan_limit))
                 
             logger.info(f"Found {len(messages)} emails fetched.")
 
@@ -90,14 +81,21 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
 
             emails_processed = 0
             emails_skipped = 0
-            for idx, msg in enumerate(messages):
+            for msg in messages:
+                if emails_processed >= target_new:
+                    break
                 message_id = get_message_id(msg)
                 if message_id in seen_message_ids:
-                    logger.info(f"Skipping already-ingested email {idx+1}/{len(messages)} (message_id={message_id})")
                     emails_skipped += 1
                     continue
                 # Reserve so duplicates within this same batch are also skipped.
                 seen_message_ids.add(message_id)
+
+                # Throttle BETWEEN processed emails to pace the shared Gemini key.
+                # Skipped dups don't sleep, and there's no sleep before the first one.
+                if emails_processed > 0:
+                    logger.info("Sleeping 13 seconds between iterations...")
+                    time.sleep(13)
 
                 subject = msg.subject or "No Subject"
                 sender = msg.from_ or "Unknown Sender"
@@ -106,7 +104,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 if not body:
                     body = "[Empty Body]"
                     
-                logger.info(f"Processing email {idx+1}/{len(messages)}: '{subject}'")
+                logger.info(f"Processing new email {emails_processed+1}/{target_new}: '{subject}'")
                 
                 # 4a. Run extract_event_intelligence
                 extracted = extract_event_intelligence(subject, body, msg_date)
@@ -206,10 +204,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 
                 emails_processed += 1
                 
-                # 4d. Cooldown sleep between emails
-                if idx < len(messages) - 1:
-                    logger.info("Sleeping 13 seconds between iterations...")
-                    time.sleep(13)
+                # (throttle is applied at the top of the loop, between processed emails)
                     
         # Update last_synced_at on success
         supabase_service.table("connected_accounts").update({
