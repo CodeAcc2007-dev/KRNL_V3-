@@ -33,12 +33,13 @@ const priorityColor = {
 export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   // FUTURE_PROOF_HOOK: Custom Tab Configuration
   const [inboxTabs, setInboxTabs] = useState<string[]>([
+    "All",
     "Important",
     "Opportunities",
     "Announcement",
     "Academic",
   ]);
-  const [activeFilter, setActiveFilter] = useState("Important");
+  const [activeFilter, setActiveFilter] = useState("All");
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,10 +93,12 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
         // 1. Fetch user's profile to get custom tabs configuration
         const profileData = await apiCall("/api/v1/profile");
         if (profileData && profileData.inbox_tabs) {
-          setInboxTabs(profileData.inbox_tabs);
-          // Set first tab as active if the current active tab is not in the list
-          if (!profileData.inbox_tabs.includes(activeFilter)) {
-            setActiveFilter(profileData.inbox_tabs[0] || "Important");
+          // Always expose an "All" tab first so events with uncategorized/other
+          // categories (e.g. "General") are never hidden.
+          const tabs = ["All", ...profileData.inbox_tabs.filter((t: string) => t.toLowerCase() !== "all")];
+          setInboxTabs(tabs);
+          if (!tabs.includes(activeFilter)) {
+            setActiveFilter(tabs[0]);
           }
         }
 
@@ -184,6 +187,9 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   // FUTURE_PROOF_HOOK: Custom Tab Configuration
   const filteredEvents = events.filter((ev) => {
     const tabLower = activeFilter.toLowerCase();
+    if (tabLower === "all") {
+      return true;
+    }
     if (tabLower === "important") {
       // Show high importance or high priority items
       return (
