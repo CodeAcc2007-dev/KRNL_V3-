@@ -15,6 +15,7 @@ interface EventItem {
   raw_summary?: string;
   created_at?: string;
   urgency_label?: string;
+  deadline_history?: Array<{ old?: string; new?: string }>;
 }
 
 const filters = ["Overdue", "This Week", "Later"];
@@ -420,6 +421,20 @@ export function DeadlinesScreen() {
                             >
                               {item.display_name}
                             </span>
+                            {item.deadline_history && item.deadline_history.length > 0 && (
+                              <span
+                                style={{
+                                  marginLeft: 6,
+                                  fontSize: 10,
+                                  color: "#fbbf24",
+                                  background: "rgba(245,158,11,0.15)",
+                                  borderRadius: 4,
+                                  padding: "1px 6px",
+                                }}
+                              >
+                                Deadline extended
+                              </span>
+                            )}
                             <span
                               className="px-2 py-0.5 flex-shrink-0"
                               style={{

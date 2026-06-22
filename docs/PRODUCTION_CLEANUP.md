@@ -35,8 +35,9 @@ Columns: **what · where · why it exists · action before prod.**
 
 ## Mock / placeholder data
 
-| What | Where | Status |
-|---|---|---|
-| Ask KRNL mock Q&A | `AskKrnlScreen.tsx` | Removed in Phase 0 — verify none linger |
+| What | Where | Why | Action before prod |
+|---|---|---|---|
+| Ask KRNL mock Q&A | `AskKrnlScreen.tsx` | Removed in Phase 0 — verify none linger | Remove if any traces remain |
+| Hardcoded deadline fallback list | DeadlinesScreen.tsx (~lines 50-88) | shows demo data when /deadlines fails | Remove before prod or replace with empty state |
 
 _Add new rows here as work proceeds._
