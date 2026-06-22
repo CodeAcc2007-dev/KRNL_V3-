@@ -58,3 +58,25 @@ def test_find_matching_returns_none_when_no_candidates():
          patch.object(event_merge.qdrant_client, "query_points",
                       return_value=pytypes.SimpleNamespace(points=[])):
         assert event_merge.find_matching_event("user-1", "x", fake_sb) is None
+
+
+def test_apply_extension_updates_event_and_appends_history():
+    fake_sb = MagicMock()
+    captured = {}
+
+    def fake_update(payload):
+        captured["payload"] = payload
+        return MagicMock(eq=lambda *a, **k: MagicMock(execute=lambda: None))
+
+    fake_sb.table.return_value.update.side_effect = fake_update
+    event = {"id": 11, "deadline": "2026-06-10", "deadline_history": []}
+
+    event_merge.apply_extension(event, "2026-06-20", "deadline_extension", "msg-1", fake_sb)
+
+    p = captured["payload"]
+    assert p["deadline"] == "2026-06-20"
+    assert p["last_update_type"] == "deadline_extension"
+    assert len(p["deadline_history"]) == 1
+    assert p["deadline_history"][0]["old"] == "2026-06-10"
+    assert p["deadline_history"][0]["new"] == "2026-06-20"
+    assert p["deadline_history"][0]["message_id"] == "msg-1"

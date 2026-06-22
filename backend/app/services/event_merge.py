@@ -110,3 +110,20 @@ def find_matching_event(user_id: str, email_text: str, supabase, limit: int = 3)
         if confirm_same_event(email_text, event):
             return event
     return None
+
+
+def apply_extension(event: dict, new_deadline: str, update_type: Optional[str],
+                    message_id: str, supabase) -> None:
+    """Move the original event's deadline forward and record the change."""
+    history = list(event.get("deadline_history") or [])
+    history.append({
+        "old": event.get("deadline"),
+        "new": new_deadline,
+        "message_id": message_id,
+        "at": datetime.utcnow().isoformat(),
+    })
+    supabase.table("events").update({
+        "deadline": new_deadline,
+        "deadline_history": history,
+        "last_update_type": update_type,
+    }).eq("id", event["id"]).execute()
