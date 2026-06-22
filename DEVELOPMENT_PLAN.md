@@ -30,6 +30,44 @@ Implemented test-first (11 passing unit tests in `backend/tests/`):
 - ⚠️ **MANUAL STEP 2:** `python scripts/cleanup_duplicates.py --apply` (after reviewing the
   dry-run) to remove the 4 legacy dupes.
 
+### 🐞 NEW open issues found 2026-06-22 (diagnosed, NO fix yet)
+
+**ISSUE A — Ask KRNL can't answer deadline questions.** "What are my deadlines" → KRNL
+says it doesn't know, even though every event row HAS a `deadline` (e.g. Internship =
+`2026-06-22`).
+- **Root cause:** `backend/app/api/v1/endpoints/query.py` (lines ~63–70) builds the LLM
+  context from ONLY `display_name` + `event_id` + `text` (the email-body chunk). It
+  **drops the structured `deadline`/`venue`/`category`** that `hybrid_retrieval` already
+  returns (see `retrieval.py` final payload). So the model only sees prose that "describes
+  sessions and dates" but never the deadline field → truthfully answers "I don't know."
+- **Secondary cause:** deadline/agenda questions are *structured* queries; semantic RAG
+  over body chunks ranks by similarity, not by date, so even the right events may not be
+  retrieved or ordered. A pure-RAG path is the wrong tool for "what's due this week."
+- **Fix direction (later — Phase 5 / Ask-KRNL-quality):** (1) inject `Deadline: …`,
+  `Venue: …`, `Category: …` into each context Document block in `query.py`; (2) optionally
+  add a structured branch that, for date/deadline intents, queries `events` ordered by
+  `deadline` (with date-window filter) instead of/alongside RAG. Clear semantic cache after
+  changing the prompt (stale cached answers).
+
+**ISSUE B — Internship email re-duplicates on every re-sync (CONFIRMED exact re-fetch).**
+Diagnostic: rows id 9/12/15 are byte-identical (same body hash, 2155 chars, deadline
+`2026-06-22`), created at 21:56 / 21:57 / 22:13 — i.e. the SAME email pulled in by 3
+separate sync runs, NOT a daily-reminder series.
+- **=> Phase 1 `message_id` dedup is the correct & sufficient fix.** It is NOT a Phase 1.5
+  (semantic-merge) case.
+- **Why it still duplicates right now:** Phase 1's dedup is coded but INACTIVE until the two
+  manual steps run — the `message_id` column doesn't exist yet, so `sync_task`'s
+  `select("message_id")` errors into its warning fallback and every re-sync re-inserts.
+- **RESOLVED 2026-06-22:** migration applied (message_id/deadline_history/last_update_type
+  + partial unique index live); `cleanup_duplicates.py --apply` removed 7 dupes (DB had
+  grown to 20 via interim re-syncs) → **13 clean rows**. Also fixed: Qdrant filter-delete by
+  `event_id` 400s (no payload index) — script now deletes vectors by POINT ID via scroll;
+  7 orphaned vectors purged → Qdrant 10 points, 0 orphans.
+- ⚠️ **One-time residual:** the 13 kept rows still have `message_id = NULL`. The next sync
+  will re-fetch recent ones, assign real message_ids, and insert ONE more dup each (the NULL
+  legacy row won't match). Run `cleanup_duplicates.py --apply` once more after the next sync;
+  after that every row has a message_id and re-syncs are permanently idempotent.
+
 ### ✅ Phase 0 — DONE & verified (committed on branch `phase-1-quota-data-integrity`)
 - **Ask KRNL fixed** — `backend/app/services/retrieval.py`:
   - `qdrant_client.search()` → `query_points(...).points` (installed client removed `.search()`).

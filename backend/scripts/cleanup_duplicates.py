@@ -19,7 +19,6 @@ from collections import defaultdict
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from supabase import create_client
-from qdrant_client.http import models as qdrant_models
 
 from app.core.config import settings
 from app.services.ingestion import qdrant_client
@@ -57,23 +56,24 @@ def main(apply: bool) -> None:
         print("Re-run with --apply to delete them (and their Qdrant vectors).")
         return
 
-    for event_id, display_name in to_delete:
-        # Delete Qdrant vectors for this event first (orphan cleanup).
-        try:
-            qdrant_client.delete(
-                collection_name=COLLECTION,
-                points_selector=qdrant_models.FilterSelector(
-                    filter=qdrant_models.Filter(must=[
-                        qdrant_models.FieldCondition(
-                            key="event_id",
-                            match=qdrant_models.MatchValue(value=str(event_id)),
-                        )
-                    ])
-                ),
-            )
-        except Exception as e:
-            print(f"  WARN: failed to delete Qdrant vectors for event {event_id}: {e}")
+    delete_ids = {str(eid) for eid, _ in to_delete}
 
+    # Delete the matching Qdrant vectors by POINT ID. Filter-deleting by
+    # event_id would require a payload index on that field (which the collection
+    # doesn't have); scrolling + deleting by id avoids that dependency.
+    try:
+        points, _ = qdrant_client.scroll(
+            collection_name=COLLECTION, limit=10000,
+            with_payload=True, with_vectors=False,
+        )
+        orphan_point_ids = [p.id for p in points if str((p.payload or {}).get("event_id")) in delete_ids]
+        if orphan_point_ids:
+            qdrant_client.delete(collection_name=COLLECTION, points_selector=orphan_point_ids)
+        print(f"  deleted {len(orphan_point_ids)} Qdrant vectors for {len(delete_ids)} events")
+    except Exception as e:
+        print(f"  WARN: failed to delete Qdrant vectors: {e}")
+
+    for event_id, display_name in to_delete:
         try:
             supabase.table("events").delete().eq("id", event_id).execute()
             print(f"  deleted event id={event_id} ('{display_name}')")
