@@ -13,6 +13,8 @@ at rest.
 |---|---|
 | Phased plan + progress log | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) |
 | Design specs (per feature, dated) | [docs/specs/](docs/specs/) |
+| Architecture decision records | [docs/decisions/](docs/decisions/) |
+| Sync flow + performance analysis | [docs/sync-flow.md](docs/sync-flow.md), [docs/sync-performance.md](docs/sync-performance.md) |
 | Session logs (dated context/ref) | [docs/sessions/](docs/sessions/) |
 | Production-cleanup tracker | [docs/PRODUCTION_CLEANUP.md](docs/PRODUCTION_CLEANUP.md) |
 | UI audit | [docs/audit/](docs/audit/) |
