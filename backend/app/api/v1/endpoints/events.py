@@ -131,7 +131,9 @@ def get_events(current_user: dict = Depends(get_current_user)):
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
             personalized_priority=priority,
-            urgency_label=urgency
+            urgency_label=urgency,
+            deadline_history=row.get("deadline_history") or [],
+            last_update_type=row.get("last_update_type"),
         ))
         
     # Sort dynamically by personalized_priority descending
@@ -191,7 +193,9 @@ def get_deadlines(current_user: dict = Depends(get_current_user)):
             created_at=row.get("created_at"),
             updated_at=row.get("updated_at"),
             personalized_priority=priority,
-            urgency_label=urgency
+            urgency_label=urgency,
+            deadline_history=row.get("deadline_history") or [],
+            last_update_type=row.get("last_update_type"),
         ))
         
     # Sort chronologically by deadline ascending
@@ -251,5 +255,7 @@ def get_event_detail(id: int, current_user: dict = Depends(get_current_user)):
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
         personalized_priority=priority,
-        urgency_label=urgency
+        urgency_label=urgency,
+        deadline_history=row.get("deadline_history") or [],
+        last_update_type=row.get("last_update_type"),
     )

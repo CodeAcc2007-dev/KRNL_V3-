@@ -20,3 +20,5 @@ class EventResponse(BaseModel):
     updated_at: Optional[str] = None
     personalized_priority: Optional[float] = None
     urgency_label: Optional[str] = None
+    deadline_history: Optional[List[Any]] = None
+    last_update_type: Optional[str] = None
