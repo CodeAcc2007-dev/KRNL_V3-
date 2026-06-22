@@ -2,6 +2,11 @@
 
 _Measured 2026-06-23, warm worker, single connected account._
 
+> **⚠️ Read [gemini-rate-limits.md](gemini-rate-limits.md) first.** The `sleep(13)` discussed
+> below is the *per-minute* (RPM) pacer. The actual hard ceiling on the free tier is **Gemini
+> 2.5 Flash = 20 requests/DAY** — tuning the sleep does NOT raise daily throughput. Speed of a
+> single sync ≠ how much you can process per day.
+
 ## TL;DR
 
 A sync spends **~73% of its time asleep on purpose.** The bottleneck is the

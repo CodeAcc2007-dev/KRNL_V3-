@@ -3,7 +3,12 @@
 - **Status:** Proposed (recommended)
 - **Date:** 2026-06-23
 - **Deciders:** project owner
-- **Related:** [sync-flow.md](../sync-flow.md) §6, [sync-performance.md](../sync-performance.md)
+- **Related:** [gemini-rate-limits.md](../gemini-rate-limits.md), [sync-flow.md](../sync-flow.md) §6, [sync-performance.md](../sync-performance.md)
+
+> **Concrete numbers (2026-06-23):** the free tier caps **Gemini 2.5 Flash at 20 requests/DAY**
+> (and 5 RPM). BYOK gives each user their *own* 20/day — it fixes cross-user fairness but a
+> single free key still can't process much. **Only enabling billing raises the per-key ceiling.**
+> See [gemini-rate-limits.md](../gemini-rate-limits.md).
 
 ## Context
 

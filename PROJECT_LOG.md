@@ -15,6 +15,7 @@ at rest.
 | Design specs (per feature, dated) | [docs/specs/](docs/specs/) |
 | Architecture decision records | [docs/decisions/](docs/decisions/) |
 | Sync flow + performance analysis | [docs/sync-flow.md](docs/sync-flow.md), [docs/sync-performance.md](docs/sync-performance.md) |
+| **Gemini rate limits & capacity** | [docs/gemini-rate-limits.md](docs/gemini-rate-limits.md) |
 | Session logs (dated context/ref) | [docs/sessions/](docs/sessions/) |
 | Production-cleanup tracker | [docs/PRODUCTION_CLEANUP.md](docs/PRODUCTION_CLEANUP.md) |
 | UI audit | [docs/audit/](docs/audit/) |
@@ -51,6 +52,8 @@ at rest.
 | A | Ask KRNL can't answer deadline questions | OPEN (2 causes) | (1) `query.py` drops structured `deadline` from LLM context; (2) **Qdrant client had no timeout → intermittent SSL timeouts** (fixed `timeout=60` 2026-06-22, commit fc9530c) — likely the bigger cause of "not working fine" |
 | B | Internship email re-duplicates on re-sync | RESOLVED 2026-06-22 | Phase 1 message_id dedup + cleanup; see [session](docs/sessions/2026-06-22-phase1-dedup-and-planning.md) |
 | — | "Full Message" collapsible shows on only 1 mail | OPEN (investigate) | DEVELOPMENT_PLAN progress log |
+| C | Most emails store as "General / Failed to run AI feature extraction" | OPEN (constraint) | **Gemini 2.5 Flash free tier = 20 calls/DAY** → 429; 35/53 events failed. Plus a flaw: failed extractions are stored + dedup'd so never retried. Fix + enable billing. See [gemini-rate-limits.md](docs/gemini-rate-limits.md) |
+| D | Inbox hid most events | RESOLVED 2026-06-23 (commit c74e58e) | tabs matched 4 category names; 39/53 are "General" → added default "All" tab |
 
 ## How to proceed (next session)
 

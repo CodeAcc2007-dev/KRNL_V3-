@@ -135,10 +135,14 @@ is to **serialize all AI calls globally** so concurrent users can't blow the rat
   (config only). Adding Gmail sync = new `account_type`, same task/queue/throttle (no
   rewrite). More users = add a worker.
 
-### Capacity math (current 13s/email throttle)
-~15s/email × 15 emails ≈ **4 min/user**, serial. In a 3-hour window → **~45 user ceiling**
-on free tier + single worker. 10–15 users now → ~40–60 min/cycle (comfortable). Headroom
-to ~40 users before Gemini billing is required.
+### Capacity math — CORRECTED 2026-06-23 (was wrong)
+**Superseded:** the old estimate below assumed RPM was the limit. The real free-tier ceiling
+is **Gemini 2.5 Flash = 20 requests/DAY** (1 per email extraction, shared with Ask KRNL), so
+the true cap is **~20 emails/day across ALL users** — not 45 users. The 13s throttle only
+paces the per-minute limit. Billing is required for anything beyond light testing. Full detail
++ per-call accounting: [gemini-rate-limits.md](gemini-rate-limits.md).
+
+_Old (RPM-based, do not trust): ~15s/email × 15 emails ≈ 4 min/user; ~45 user ceiling._
 
 ### Two dedup problems are DIFFERENT
 | Problem | Trigger | Solution |
