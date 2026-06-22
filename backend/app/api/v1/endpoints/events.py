@@ -134,10 +134,11 @@ def get_events(current_user: dict = Depends(get_current_user)):
             urgency_label=urgency,
             deadline_history=row.get("deadline_history") or [],
             last_update_type=row.get("last_update_type"),
+            email_date=row.get("email_date"),
         ))
         
-    # Sort dynamically by personalized_priority descending
-    events_list.sort(key=lambda e: e.personalized_priority or 0.0, reverse=True)
+    # Sort by latest email first (email_date), falling back to ingest time.
+    events_list.sort(key=lambda e: e.email_date or e.created_at or "", reverse=True)
     return events_list
 
 @router.get("/deadlines", response_model=List[EventResponse])
@@ -196,6 +197,7 @@ def get_deadlines(current_user: dict = Depends(get_current_user)):
             urgency_label=urgency,
             deadline_history=row.get("deadline_history") or [],
             last_update_type=row.get("last_update_type"),
+            email_date=row.get("email_date"),
         ))
         
     # Sort chronologically by deadline ascending
@@ -258,4 +260,5 @@ def get_event_detail(id: int, current_user: dict = Depends(get_current_user)):
         urgency_label=urgency,
         deadline_history=row.get("deadline_history") or [],
         last_update_type=row.get("last_update_type"),
+        email_date=row.get("email_date"),
     )

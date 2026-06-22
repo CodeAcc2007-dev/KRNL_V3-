@@ -136,6 +136,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 event_data = {
                     "user_id": user_id,
                     "message_id": message_id,
+                    "email_date": msg_date,
                     "display_name": extracted.get("display_name") or subject,
                     "deadline": None if matched_event else extracted.get("deadline"),
                     "venue": extracted.get("venue"),

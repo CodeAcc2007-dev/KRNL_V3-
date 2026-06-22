@@ -19,6 +19,7 @@ interface EventItem {
   importance_score: number;
   raw_summary?: string;
   created_at?: string;
+  email_date?: string;
   personalized_priority?: number;
   last_update_type?: string | null;
 }
@@ -194,9 +195,11 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
     return ev.category && ev.category.toLowerCase() === tabLower;
   });
 
-  // Sort by personalized_priority descending (handled by API, but reinforced on client)
+  // Sort by latest email first (email_date, falling back to ingest time).
   const sortedEvents = [...filteredEvents].sort(
-    (a, b) => (b.personalized_priority || 0) - (a.personalized_priority || 0)
+    (a, b) =>
+      new Date(b.email_date || b.created_at || 0).getTime() -
+      new Date(a.email_date || a.created_at || 0).getTime()
   );
 
   return (
@@ -376,7 +379,7 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                 {/* Metadata icon group */}
                 <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                   {/* Time */}
-                  <span style={{ color: "#8a8f98", fontSize: 10 }}>{getTimeLabel(email.created_at)}</span>
+                  <span style={{ color: "#8a8f98", fontSize: 10 }}>{getTimeLabel(email.email_date || email.created_at)}</span>
 
                   {email.last_update_type && (
                     <span

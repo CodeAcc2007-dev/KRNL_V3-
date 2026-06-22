@@ -22,3 +22,4 @@ class EventResponse(BaseModel):
     urgency_label: Optional[str] = None
     deadline_history: Optional[List[Any]] = None
     last_update_type: Optional[str] = None
+    email_date: Optional[str] = None
