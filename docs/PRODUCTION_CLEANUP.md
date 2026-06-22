@@ -13,6 +13,9 @@ Columns: **what · where · why it exists · action before prod.**
 | pytest dependency | system-wide install | run tests | Dev/CI only, not a runtime dep |
 | Connection smoke test | `backend/test_connection.py` | manual env check | Remove or move to tests/ |
 | Duplicate-cleanup script | `backend/scripts/cleanup_duplicates.py` | one-time/ops dedup of legacy rows | Keep as ops tool; never on a request path |
+| Local Redis compose | `docker-compose.yml` | local broker for dev/testing | Prod uses managed Redis via `REDIS_URL`; compose is dev-only |
+| Qdrant health-check | `backend/scripts/qdrant_healthcheck.py` | diagnostic | Keep as ops tool, not on a request path |
+| Celery worker run cmd | manual: `celery -A app.core.celery_app worker --concurrency=1` | dev/testing worker | Prod runs the worker as a managed process |
 
 ## Dev-only fallbacks & temp values
 

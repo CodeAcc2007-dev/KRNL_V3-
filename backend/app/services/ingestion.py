@@ -17,7 +17,8 @@ genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 # Initialize Qdrant Client
 qdrant_client = QdrantClient(
     url=settings.QDRANT_URL,
-    api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None
+    api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None,
+    timeout=60
 )
 
 class EmailExtractionModel(BaseModel):
