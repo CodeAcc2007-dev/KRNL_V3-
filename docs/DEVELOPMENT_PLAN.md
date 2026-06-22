@@ -18,7 +18,7 @@ Implemented test-first (11 passing unit tests in `backend/tests/`):
 - **Extraction update signals.** `EmailExtractionModel` + fallback now emit
   `is_update: bool` and `update_type` (deadline_extension/reminder/venue_change/…); stored
   as `events.last_update_type`. (Phase 1.5 acts on these.)
-- **Migration file `backend/phase1_dedup_migration.sql`** adds `message_id`,
+- **Migration file `backend/migrations/phase1_dedup_migration.sql`** adds `message_id`,
   `deadline_history jsonb`, `last_update_type`, and a partial unique index
   `(user_id, message_id) WHERE message_id IS NOT NULL` (NULLs distinct → no conflict with
   legacy rows).
