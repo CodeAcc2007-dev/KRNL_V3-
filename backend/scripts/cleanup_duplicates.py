@@ -30,20 +30,23 @@ def main(apply: bool) -> None:
     supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
     rows = (supabase.table("events")
-            .select("id, user_id, display_name")
+            .select("id, user_id, display_name, message_id")
             .order("id")
             .execute()).data or []
     print(f"Loaded {len(rows)} event rows.")
 
     groups = defaultdict(list)
     for r in rows:
-        groups[(r["user_id"], r["display_name"])].append(r["id"])
+        groups[(r["user_id"], r["display_name"])].append(r)
 
     to_delete = []  # list of (id, display_name)
-    for (user_id, display_name), ids in groups.items():
-        if len(ids) > 1:
-            keep = min(ids)
-            dupes = sorted(i for i in ids if i != keep)
+    for (user_id, display_name), members in groups.items():
+        if len(members) > 1:
+            # Prefer keeping a row that HAS a message_id so future syncs dedup it
+            # (keeping a legacy NULL-message_id row would let it re-duplicate forever).
+            with_mid = [r for r in members if r.get("message_id")]
+            keep = min(with_mid or members, key=lambda r: r["id"])["id"]
+            dupes = sorted(r["id"] for r in members if r["id"] != keep)
             print(f"  '{display_name}': keep id={keep}, delete {dupes}")
             to_delete.extend((i, display_name) for i in dupes)
 
