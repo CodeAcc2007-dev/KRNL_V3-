@@ -76,11 +76,17 @@ quotas, so the real ceiling is likely the extraction model's RPM alone, not both
 **Not worth it:** a faster laptop, more RAM, threads — the CPU is idle during the sleep and
 the network roundtrips are small. Hardware is not the constraint.
 
-## The "target = 10 new" change
+## The "target = 10 new" change — ✅ IMPLEMENTED 2026-06-23
 
-**Today** ([sync_task.py](../backend/app/tasks/sync_task.py)): fetch is capped first
-(`messages = messages[:max_emails]`), *then* dedup skips already-synced ones inside the loop.
-So `max_emails=10` can yield only 4 new (6 were dups) — the cap counts dups.
+**Before** ([sync_task.py](../backend/app/tasks/sync_task.py)): fetch was capped first
+(`messages = messages[:max_emails]`), *then* dedup skipped already-synced ones inside the
+loop. So `max_emails=10` could yield only 4 new (6 were dups) — the cap counted dups.
+
+**Now:** the sync scans the newest `scan_limit = max(N*6, 60)` emails and processes until
+`max_emails` **NEW** emails are synced, `continue`-ing past dups without counting them.
+Verified: a run found 60, skipped 6 dups, processed exactly 10 new (events 18 → 28).
+Caveat: once the newest `scan_limit` are all synced, a run finds 0 new — raise `scan_limit`
+or add a cursor to backfill deeper.
 
 **Wanted:** keep going until **10 newly-ingested** emails, skipping (not counting) dups.
 

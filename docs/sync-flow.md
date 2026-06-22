@@ -37,27 +37,30 @@ flowchart TD
     B --> C{Has imap_username<br/>+ encrypted_token?}
     C -- No --> C1([return failed])
     C -- Yes --> D[Decrypt token]
-    D --> E{last_synced_at set?}
-    E -- Yes --> F[criteria = date_gte&#40;last_synced date&#41;<br/>INCREMENTAL]
-    E -- No --> G[criteria = ALL]
-    F --> H[IMAP login + fetch newest-first,<br/>cap max_emails 🟫]
-    G --> H
+    D --> E[target_new = max_emails<br/>scan_limit = max&#40;N*6, 60&#41;]
+    E --> H[IMAP login + fetch newest-first,<br/>limit = scan_limit 🟫]
     H --> I[Load seen_message_ids =<br/>existing message_ids for user 🟦]
     I --> J{{Per-email loop →<br/>see section 3}}
 ```
 
-**Key decision:** `last_synced_at` set → only fetch mail **since that date** (why a re-sync
-often pulls just a few). Otherwise fetch everything up to the cap.
+**Key behaviour (target-N):** fetch the newest `scan_limit` emails and process until
+`max_emails` **NEW** ones are synced, skipping dups without counting them. `last_synced_at`
+no longer windows the fetch — the `message_id` dedup decides what's new.
 
 ## 3. Per-email loop — the heart of it
 
 ```mermaid
 flowchart TD
-    L([Next email]) --> M[message_id = get_message_id&#40;msg&#41;]
+    L([Next email]) --> TB{processed &gt;= target_new?}
+    TB -- Yes --> EXIT
+    TB -- No --> M[message_id = get_message_id&#40;msg&#41;]
     M --> N{message_id in<br/>seen_message_ids?}
-    N -- Yes --> N1[skipped++ → continue ⏭️<br/>no Gemini call] --> L
+    N -- Yes --> N1[skipped++ → continue ⏭️<br/>NOT counted · no Gemini] --> L
     N -- No --> O[add to seen]
-    O --> P[Extract event intel 🟧<br/>~3.5s ·  is_update / update_type / deadline]
+    O --> THR{processed &gt; 0?}
+    THR -- Yes --> TH[sleep 13s ⏳ THROTTLE<br/>between processed emails] --> P
+    THR -- No --> P
+    P[Extract event intel 🟧<br/>~3.5s ·  is_update / update_type / deadline]
     P --> Q{is_update AND<br/>update_type == deadline_extension<br/>AND deadline present?}
     Q -- No --> U[matched_event = None]
     Q -- Yes --> R[find_matching_event:<br/>embed 🟧 → Qdrant search 🟪 →<br/>active events 🟦 → confirm yes/no 🟧]
@@ -68,12 +71,11 @@ flowchart TD
     U --> V[Build event_data<br/>deadline = None if matched else extracted]
     V --> W[INSERT event 🟦]
     W --> X{Insert result?}
-    X -- empty --> X1[log error → continue] --> Z
-    X -- unique-violation 23505 --> X2[skipped++ → continue ⏭️] --> Z
+    X -- empty --> X1[log error → continue] --> L
+    X -- unique-violation 23505 --> X2[skipped++ → continue ⏭️] --> L
     X -- ok --> Y[chunk body → embed batch 🟧 →<br/>upsert vectors 🟪 · processed++]
-    Y --> Z{More emails<br/>AND not last?}
-    Z -- Yes --> TH[sleep 13s ⏳ THROTTLE<br/>73% of total time] --> L
-    Z -- No --> EXIT([Update last_synced_at = now 🟦<br/>return processed / skipped])
+    Y --> L
+    EXIT([Update last_synced_at = now 🟦<br/>return processed / skipped])
 ```
 
 ### The four decisions that matter
