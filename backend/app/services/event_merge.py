@@ -32,7 +32,7 @@ def should_apply_extension(current: Optional[str], new: Optional[str]) -> bool:
 
 
 def confirm_same_event(email_text: str, event: dict) -> bool:
-    """Ask Gemini yes/no whether the email updates the given event."""
+    """Confirm via a single yes/no check whether the email updates the given event."""
     prompt = (
         "Does the following email provide an update (e.g. a new deadline) for the event "
         f"named \"{event.get('display_name')}\"? Answer with only YES or NO.\n\n"
@@ -53,7 +53,8 @@ def confirm_same_event(email_text: str, event: dict) -> bool:
 def find_matching_event(user_id: str, email_text: str, supabase, limit: int = 3) -> Optional[dict]:
     """Find the existing active event an update email refers to, or None.
 
-    Embedding shortlist via Qdrant -> active events from Supabase -> LLM yes/no confirm.
+    Embedding shortlist via Qdrant -> active events from Supabase -> yes/no confirm of
+    the single top active candidate.
     """
     try:
         vector = generate_embeddings(email_text)
@@ -107,8 +108,8 @@ def find_matching_event(user_id: str, email_text: str, supabase, limit: int = 3)
         dl = parse_deadline(event.get("deadline"))
         if dl is None or dl < today:  # active = future deadline
             continue
-        if confirm_same_event(email_text, event):
-            return event
+        # Confirm only the top active candidate (caps the model call at one per email).
+        return event if confirm_same_event(email_text, event) else None
     return None
 
 
