@@ -85,13 +85,13 @@ def clean_email_body(raw_body: str) -> str:
 
 def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
     """
-    Structured event details extraction utilizing Gemini 2.5 Flash.
+    Structured event details extraction.
     """
     clean_body = clean_email_body(body)
     prompt = f"Analyze the email Subject and Body provided below. Extract the key metadata and details in structured JSON format according to the schema:\n\nSubject: {subject}\n\nBody:\n{clean_body}"
     try:
         response = genai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

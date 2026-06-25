@@ -77,10 +77,10 @@ def query_ai_assistant(request: QueryRequest, current_user: dict = Depends(get_c
 
     user_prompt = f"Context Documents:\n{context_str}\n\nUser Query: {query_text}"
 
-    # 4. Generate answer using Gemini 2.5 Flash
+    # 4. Generate answer
     try:
         response = genai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
