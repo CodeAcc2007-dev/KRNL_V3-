@@ -48,3 +48,6 @@ pnpm-debug.log*
 
 # Local design assets (kept on disk, not tracked)
 High-Fidelity PWA Design System.zip
+
+# SDD scratch
+.superpowers/

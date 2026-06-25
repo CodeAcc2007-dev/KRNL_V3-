@@ -41,6 +41,16 @@ at rest.
   looked for nonexistent `app/tasks/tasks.py`, so the worker never registered
   `run_email_sync` (async dispatch failed "unregistered task"; sync fallback masked it).
   Now `include=['app.tasks.sync_task','app.tasks.deletion_task']`.
+- **Fixed 2026-06-25:** a second, separate Celery bug — `sync_task.py` and
+  `deletion_task.py` used the generic `@shared_task` decorator, which resolves to
+  Celery's built-in default app (AMQP/RabbitMQ broker) when nothing else is bound,
+  _not_ the project's Redis-configured `celery_app`. `.delay()` always failed
+  (`Connection refused` to RabbitMQ) and silently fell back to the synchronous
+  `max_emails=3` path — this is why Sync Now only ever returned 3 emails instead of 10.
+  Fix: bind both tasks explicitly via `@celery_app.task(...)`. Verified end-to-end:
+  worker now processes the full `max_emails=10` default.
+- **Resolved 2026-06-25 (see Issue C):** switched Gemini model to `gemini-3.1-flash-lite`
+  (500 RPD) across all 3 call sites — see [gemini-rate-limits.md](docs/gemini-rate-limits.md).
 - **Residual dup:** that sync re-created the legacy NULL-`message_id` rows once (e.g.
   Internship) — run `cleanup_duplicates.py --apply` once more, then it's idempotent.
 - **Later:** Phase 3 auto-sync (Celery Beat), Phase 4 security, Phase 5 UX polish.
@@ -52,8 +62,10 @@ at rest.
 | A | Ask KRNL can't answer deadline questions | OPEN (2 causes) | (1) `query.py` drops structured `deadline` from LLM context; (2) **Qdrant client had no timeout → intermittent SSL timeouts** (fixed `timeout=60` 2026-06-22, commit fc9530c) — likely the bigger cause of "not working fine" |
 | B | Internship email re-duplicates on re-sync | RESOLVED 2026-06-22 | Phase 1 message_id dedup + cleanup; see [session](docs/sessions/2026-06-22-phase1-dedup-and-planning.md) |
 | — | "Full Message" collapsible shows on only 1 mail | OPEN (investigate) | DEVELOPMENT_PLAN progress log |
-| C | Most emails store as "General / Failed to run AI feature extraction" | OPEN (constraint) | **Gemini 2.5 Flash free tier = 20 calls/DAY** → 429; 35/53 events failed. Plus a flaw: failed extractions are stored + dedup'd so never retried. Fix + enable billing. See [gemini-rate-limits.md](docs/gemini-rate-limits.md) |
+| C | Most emails store as "General / Failed to run AI feature extraction" | RESOLVED 2026-06-25 | **Gemini 2.5 Flash free tier = 20 calls/DAY** → 429; 35/53 events failed. Fixed by switching to `gemini-3.1-flash-lite` (500 RPD), same free key. Open flaw still standing: failed extractions are stored + dedup'd so never retried — only matters if 500 RPD is ever exceeded. See [gemini-rate-limits.md](docs/gemini-rate-limits.md) |
 | D | Inbox hid most events | RESOLVED 2026-06-23 (commit c74e58e) | tabs matched 4 category names; 39/53 are "General" → added default "All" tab |
+| E | Sync Now only returned 3 emails, not 10 | RESOLVED 2026-06-25 | `@shared_task` resolved to Celery's default app (RabbitMQ), not the Redis `celery_app` — `.delay()` always failed and fell back to the hardcoded 3-email sync path. Fixed by binding via `@celery_app.task(...)` |
+| F | Deadlines view: future events showing as "expired"; cards not clickable | RESOLVED 2026-06-25 | `get_urgency_label` compared full datetime, so same-day deadlines stored at midnight read as already-past. Fixed to compare by date. Cards now open the in-app email detail view; titles wrap to 2 lines instead of truncating |
 
 ## How to proceed (next session)
 

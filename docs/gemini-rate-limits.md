@@ -1,5 +1,11 @@
 # Gemini rate limits & real sync capacity
 
+**RESOLVED 2026-06-25:** switched all 3 call sites (extraction, Ask KRNL, deadline-extension
+confirm) from `gemini-2.5-flash` (20 RPD) to `gemini-3.1-flash-lite` (500 RPD), same free key,
+no billing needed. 500/day comfortably covers a 10-15 user pilot at ~10 emails/user/day plus
+Ask KRNL usage. The analysis below is kept for historical context on why the old model was a
+hard wall.
+
 _Source: Google AI Studio dashboard, project "KRNL Production", observed 2026-06-23
 (free tier, billing NOT enabled). These are the hard numbers everything else must respect._
 
