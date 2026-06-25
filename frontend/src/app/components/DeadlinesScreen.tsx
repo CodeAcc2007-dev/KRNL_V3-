@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Clock, ChevronRight, CheckCircle2, Loader2, ChevronLeft, Calendar as CalendarIcon } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { apiCall } from "../lib/api";
+import { EmailDetailScreen } from "./EmailDetailScreen";
 
 interface EventItem {
   id: number;
@@ -27,6 +28,7 @@ export function DeadlinesScreen() {
   const [deadlines, setDeadlines] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   // Calendar State
   const [activeView, setActiveView] = useState<"list" | "calendar">("list");
@@ -154,13 +156,19 @@ export function DeadlinesScreen() {
   const formatDueText = (deadlineStr: string, urgency: string) => {
     try {
       const date = new Date(deadlineStr);
-      if (urgency.toLowerCase() === "today") {
-        return `Due Today, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      // Deadlines stored as date-only land on midnight UTC; hide the
+      // misleading time in that case and only show it for real times.
+      const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const urg = urgency.toLowerCase();
+      if (urg === "today") {
+        return isMidnight ? "Due Today" : `Due Today, ${timeStr}`;
       }
-      if (urgency.toLowerCase() === "tomorrow") {
-        return `Due Tomorrow, ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      if (urg === "tomorrow") {
+        return isMidnight ? "Due Tomorrow" : `Due Tomorrow, ${timeStr}`;
       }
-      return `Due ${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      return isMidnight ? `Due ${dateStr}` : `Due ${dateStr} at ${timeStr}`;
     } catch {
       return `Due ${deadlineStr}`;
     }
@@ -400,7 +408,8 @@ export function DeadlinesScreen() {
 
                       {/* Card */}
                       <div
-                        className="flex-1 flex items-center justify-between px-4 py-3.5"
+                        onClick={() => setSelectedEventId(item.id)}
+                        className="flex-1 flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer"
                         style={{
                           background: style.bgAccent || "#1c1c21",
                           border: `1px solid ${style.borderColor}`,
@@ -409,15 +418,16 @@ export function DeadlinesScreen() {
                         }}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-start gap-2 mb-1">
                             <span
                               style={{
                                 color: isDone ? "#8a8f98" : "#f7f8f8",
                                 fontSize: 14,
                                 fontWeight: 600,
+                                lineHeight: 1.3,
                                 textDecoration: isDone ? "line-through" : "none",
                               }}
-                              className="truncate"
+                              className="line-clamp-2 flex-1 min-w-0"
                             >
                               {item.display_name}
                             </span>
@@ -472,7 +482,7 @@ export function DeadlinesScreen() {
                         <div className="flex items-center gap-2 ml-3">
                           <motion.button
                             whileTap={{ scale: 0.88 }}
-                            onClick={() => toggleCheck(item.id)}
+                            onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
                             className="flex items-center justify-center w-7 h-7 rounded-full"
                             style={{
                               background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
@@ -585,7 +595,8 @@ export function DeadlinesScreen() {
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between px-4 py-3 bg-[#1c1c21] border rounded-2xl"
+                      onClick={() => setSelectedEventId(item.id)}
+                      className="flex items-center justify-between gap-3 px-4 py-3 bg-[#1c1c21] border rounded-2xl cursor-pointer"
                       style={{
                         borderColor: style.borderColor,
                         opacity: isDone ? 0.7 : 1,
@@ -600,7 +611,7 @@ export function DeadlinesScreen() {
                               fontWeight: 600,
                               textDecoration: isDone ? "line-through" : "none",
                             }}
-                            className="truncate"
+                            className="line-clamp-2 flex-1 min-w-0"
                           >
                             {item.display_name}
                           </span>
@@ -621,7 +632,7 @@ export function DeadlinesScreen() {
                       <div className="flex items-center gap-1 ml-2">
                         <motion.button
                           whileTap={{ scale: 0.88 }}
-                          onClick={() => toggleCheck(item.id)}
+                          onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
                           className="flex items-center justify-center w-6.5 h-6.5 rounded-full"
                           style={{
                             background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
@@ -643,6 +654,30 @@ export function DeadlinesScreen() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {selectedEventId !== null && (() => {
+          const selectedEvent = deadlines.find((e) => e.id === selectedEventId);
+          return (
+            <EmailDetailScreen
+              eventId={selectedEventId}
+              previewData={
+                selectedEvent
+                  ? {
+                      display_name: selectedEvent.display_name,
+                      raw_summary: selectedEvent.raw_summary,
+                      category: selectedEvent.category,
+                      importance_score: selectedEvent.importance_score,
+                      deadline: selectedEvent.deadline,
+                      created_at: selectedEvent.created_at,
+                    }
+                  : undefined
+              }
+              onBack={() => setSelectedEventId(null)}
+            />
+          );
+        })()}
+      </AnimatePresence>
     </div>
   );
 }

@@ -68,8 +68,9 @@ def get_urgency_label(deadline_str: str) -> str:
     today_ist = now_ist.date()
     deadline_date = parsed_dt.date()
     
-    # Expiration check
-    if parsed_dt < now_ist.replace(tzinfo=None):
+    # Expiration check (compare by date so a deadline due today isn't
+    # treated as expired just because it is stored at midnight)
+    if deadline_date < today_ist:
         return "expired"
     elif deadline_date == today_ist:
         return "today"
