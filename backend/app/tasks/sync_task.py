@@ -2,7 +2,7 @@ import time
 import logging
 import uuid
 from datetime import datetime
-from celery import shared_task
+from app.core.celery_app import celery_app
 from imap_tools import MailBox
 from supabase import create_client
 from app.core.config import settings
@@ -23,7 +23,7 @@ logger = logging.getLogger("uvicorn.error")
 # Initialize service client for tasks bypass
 supabase_service = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
-@shared_task(bind=True, name="app.tasks.sync_task.run_email_sync", max_retries=3)
+@celery_app.task(bind=True, name="app.tasks.sync_task.run_email_sync", max_retries=3)
 def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
     """
     Celery task to run email synchronization.
