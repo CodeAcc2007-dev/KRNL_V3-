@@ -23,18 +23,9 @@ interface AskKrnlScreenProps {
 const initialMessages: Message[] = [
   {
     id: 1,
-    role: "user",
-    content: "What academic deadlines do I have this week?",
-  },
-  {
-    id: 2,
     role: "ai",
     content:
-      "Here's a summary of your academic deadlines this week:\n\n• **CS 302 Quiz 1** has been rescheduled to Friday, Oct 12 — room changed to LT 101. ¹\n\n• **HSS 102 Assignment** is due Thursday at 11:59 PM — chapters 4–6 reading required. ²\n\nWant me to set reminders or draft a schedule?",
-    citations: [
-      { id: 1, label: "CS 302 Quiz Announcement", event_id: 1 },
-      { id: 2, label: "HSS 102 Reading", event_id: 2 },
-    ],
+      "Hi! I'm **KRNL** — ask me anything about your synced emails and deadlines.\n\nFor example: *\"What deadlines do I have this week?\"* or *\"Any internship opportunities?\"*",
   },
 ];
 

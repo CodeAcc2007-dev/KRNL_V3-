@@ -1,11 +1,11 @@
 import logging
-from celery import shared_task
+from app.core.celery_app import celery_app
 from datetime import datetime, timezone
 from app.services.deletion import execute_full_cascade_wipe, supabase_admin
 
 logger = logging.getLogger("celery")
 
-@shared_task(name="app.tasks.deletion_task.check_and_execute_matured_deletions")
+@celery_app.task(name="app.tasks.deletion_task.check_and_execute_matured_deletions")
 def check_and_execute_matured_deletions():
     """
     Celery periodic task to find matured account deletion requests (older than 24 hours)

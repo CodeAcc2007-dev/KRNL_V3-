@@ -17,7 +17,8 @@ genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
 # Initialize Qdrant Client
 qdrant_client = QdrantClient(
     url=settings.QDRANT_URL,
-    api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None
+    api_key=settings.QDRANT_API_KEY if settings.QDRANT_API_KEY else None,
+    timeout=60
 )
 
 class EmailExtractionModel(BaseModel):
@@ -29,6 +30,8 @@ class EmailExtractionModel(BaseModel):
     importance_score: float = Field(description="Calculated importance score from 0.0 (low priority) to 1.0 (critical priority)")
     raw_summary: str = Field(description="Brief 2-3 sentence summary of the email context and its requirements")
     links: List[str] = Field(default_factory=list, description="Array of registration, document, or reference URLs extracted from the email body")
+    is_update: bool = Field(default=False, description="True if this email is a follow-up/update about a PREVIOUSLY announced event (e.g. deadline extended, venue changed, reminder, cancellation) rather than a brand-new announcement")
+    update_type: Optional[str] = Field(default=None, description="When is_update is true, the kind of update: one of 'deadline_extension', 'reminder', 'venue_change', 'cancellation', or 'other'; otherwise null/None")
 
 def init_qdrant_collection():
     """
@@ -82,13 +85,13 @@ def clean_email_body(raw_body: str) -> str:
 
 def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
     """
-    Structured event details extraction utilizing Gemini 2.5 Flash.
+    Structured event details extraction.
     """
     clean_body = clean_email_body(body)
     prompt = f"Analyze the email Subject and Body provided below. Extract the key metadata and details in structured JSON format according to the schema:\n\nSubject: {subject}\n\nBody:\n{clean_body}"
     try:
         response = genai_client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.1-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
@@ -108,7 +111,9 @@ def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
             "tags": [],
             "importance_score": 0.1,
             "raw_summary": "Failed to run AI feature extraction on this email.",
-            "links": []
+            "links": [],
+            "is_update": False,
+            "update_type": None
         }
 
 def generate_embeddings(text: str) -> list:
@@ -119,14 +124,51 @@ def generate_embeddings(text: str) -> list:
         return [0.0] * 768
     try:
         response = genai_client.models.embed_content(
-            model="text-embedding-004",
-            contents=text.strip()
+            model="models/gemini-embedding-001",
+            contents=text.strip(),
+            config=types.EmbedContentConfig(output_dimensionality=768)
         )
-        if not response or not response.embedding or not response.embedding.values:
+        if not response or not response.embeddings or not response.embeddings[0].values:
             raise ValueError("Empty embedding response returned from Gemini API.")
-        return response.embedding.values
+        return response.embeddings[0].values
     except Exception as e:
         raise RuntimeError(f"Google GenAI Embedding service failed: {str(e)}")
+
+def generate_embeddings_batch(texts: List[str]) -> List[list]:
+    """
+    Generates 768-dim embeddings for many texts in a single Gemini call.
+
+    Returns one vector per input, in order. Blank/whitespace entries are
+    assigned a zero vector and are NOT sent to the API (saving quota), so the
+    output stays index-aligned with the input.
+    """
+    if not texts:
+        return []
+
+    cleaned = [(t or "").strip() for t in texts]
+    nonempty_idx = [i for i, t in enumerate(cleaned) if t]
+    results: List[list] = [[0.0] * 768 for _ in texts]
+    if not nonempty_idx:
+        return results
+
+    payload = [cleaned[i] for i in nonempty_idx]
+    try:
+        response = genai_client.models.embed_content(
+            model="models/gemini-embedding-001",
+            contents=payload,
+            config=types.EmbedContentConfig(output_dimensionality=768)
+        )
+    except Exception as e:
+        raise RuntimeError(f"Google GenAI batch embedding service failed: {str(e)}")
+
+    if not response or not response.embeddings or len(response.embeddings) != len(payload):
+        raise RuntimeError("Batch embedding response size mismatch from Gemini API.")
+
+    for slot, emb in zip(nonempty_idx, response.embeddings):
+        if not emb.values:
+            raise RuntimeError("Empty embedding returned from Gemini API.")
+        results[slot] = emb.values
+    return results
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 100) -> list:
     """

@@ -13,9 +13,9 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function LoginScreen() {
+export function LoginScreen({ oauthError }: { oauthError?: string | null }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(oauthError ?? null);
 
   const handleGoogleSignIn = async () => {
     setError(null);

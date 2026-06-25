@@ -22,8 +22,8 @@ function getDirection(from: Screen, to: Screen): number {
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [oauthError, setOauthError] = useState<string | null>(null);
   const [activeScreen, setActiveScreen] = useState<Screen>("inbox");
-  const [prevScreen, setPrevScreen] = useState<Screen>("inbox");
   const [direction, setDirection] = useState(0);
 
   // PWA Display & Installer Promos
@@ -32,6 +32,14 @@ export default function App() {
   const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   useEffect(() => {
+    // Parse OAuth error from redirect URL (e.g. ?error=server_error&error_description=...)
+    const params = new URLSearchParams(window.location.search);
+    const urlError = params.get("error_description") || params.get("error");
+    if (urlError) {
+      setOauthError(decodeURIComponent(urlError.replace(/\+/g, " ")));
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+
     // Check initial session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
@@ -99,7 +107,6 @@ export default function App() {
   const navigate = (screen: Screen) => {
     if (screen === activeScreen) return;
     setDirection(getDirection(activeScreen, screen));
-    setPrevScreen(activeScreen);
     setActiveScreen(screen);
   };
 
@@ -154,7 +161,7 @@ export default function App() {
             />
           </div>
         ) : !session ? (
-          <LoginScreen />
+          <LoginScreen oauthError={oauthError} />
         ) : (
           <>
             {/* Status bar notch area (Desktop frame only) */}

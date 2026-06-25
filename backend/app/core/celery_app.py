@@ -4,7 +4,8 @@ from app.core.config import settings
 celery_app = Celery(
     'krnl_tasks',
     broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL
+    backend=settings.REDIS_URL,
+    include=['app.tasks.sync_task', 'app.tasks.deletion_task']
 )
 
 celery_app.conf.update(
