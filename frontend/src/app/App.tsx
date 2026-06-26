@@ -305,12 +305,14 @@ export default function App() {
               />
             )}
 
-            {/* Global Bottom Nav (only visible if logged in, styled notch-safe) */}
+            {/* Global Bottom Nav — floating, notch-safe */}
             <div
               style={{
-                paddingBottom: isMobileOrStandalone ? "env(safe-area-inset-bottom)" : 0,
-                background: "rgba(8,9,10,0.85)",
-                backdropFilter: "blur(20px)"
+                paddingBottom: isMobileOrStandalone
+                  ? "calc(env(safe-area-inset-bottom) + 10px)"
+                  : 14,
+                paddingLeft: 14,
+                paddingRight: 14,
               }}
               className="absolute bottom-0 left-0 right-0 z-40"
             >

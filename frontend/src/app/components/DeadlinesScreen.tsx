@@ -123,8 +123,8 @@ export function DeadlinesScreen() {
         bgAccent: "rgba(239,68,68,0.06)",
         borderColor: "rgba(239,68,68,0.35)",
         badgeBg: "rgba(239,68,68,0.15)",
-        badgeColor: "#f87171",
-        dotColor: "#ef4444",
+        badgeColor: "var(--danger)",
+        dotColor: "var(--danger)",
       };
     } else if (urg === "tomorrow") {
       return {
@@ -139,16 +139,16 @@ export function DeadlinesScreen() {
         bgAccent: "rgba(59,130,246,0.06)",
         borderColor: "rgba(59,130,246,0.35)",
         badgeBg: "rgba(59,130,246,0.15)",
-        badgeColor: "#60a5fa",
-        dotColor: "#3b82f6",
+        badgeColor: "var(--accent)",
+        dotColor: "var(--accent)",
       };
     } else {
       return {
         bgAccent: "transparent",
-        borderColor: "#2d2d34",
+        borderColor: "var(--border)",
         badgeBg: "rgba(141,145,152,0.12)",
-        badgeColor: "#8a8f98",
-        dotColor: "#8a8f98",
+        badgeColor: "var(--text-3)",
+        dotColor: "var(--text-3)",
       };
     }
   };
@@ -252,11 +252,11 @@ export function DeadlinesScreen() {
       const label = item.urgency_label?.toLowerCase();
       return label === "today" || label === "tomorrow" || label === "expired";
     });
-    if (hasUrgent) return "#ef4444"; // Red
+    if (hasUrgent) return "var(--danger)"; // Red
 
     const hasThisWeek = dateDeadlines.some((item) => item.urgency_label?.toLowerCase() === "this_week");
     if (hasThisWeek) return "#f59e0b"; // Yellow
-    return "#3b82f6"; // Blue
+    return "var(--accent)"; // Blue
   };
 
   const selectedDateDeadlines = getDeadlinesForDate(
@@ -271,21 +271,21 @@ export function DeadlinesScreen() {
   ];
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
+    <div className="flex flex-col h-full" style={{ background: "var(--bg)" }}>
       <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         {/* Header */}
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between mb-0.5">
-            <span style={{ color: "#f7f8f8", fontSize: 22, fontWeight: 700 }}>
+            <span style={{ color: "var(--text)", fontSize: 22, fontWeight: 700 }}>
               Deadlines
             </span>
 
             {/* Toggle View Control */}
-            <div className="flex p-0.5 rounded-lg bg-[#1c1c21] border border-[#2d2d34] flex-shrink-0">
+            <div className="flex p-0.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] flex-shrink-0">
               <button
                 onClick={() => setActiveView("list")}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  activeView === "list" ? "bg-[#6366f1] text-white" : "text-[#8a8f98]"
+                  activeView === "list" ? "bg-[var(--accent)] text-white" : "text-[var(--text-3)]"
                 }`}
               >
                 List
@@ -293,7 +293,7 @@ export function DeadlinesScreen() {
               <button
                 onClick={() => setActiveView("calendar")}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${
-                  activeView === "calendar" ? "bg-[#6366f1] text-white" : "text-[#8a8f98]"
+                  activeView === "calendar" ? "bg-[var(--accent)] text-white" : "text-[var(--text-3)]"
                 }`}
               >
                 Calendar
@@ -301,20 +301,20 @@ export function DeadlinesScreen() {
             </div>
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span style={{ color: "#8a8f98", fontSize: 13 }}>
+            <span style={{ color: "var(--text-3)", fontSize: 13 }}>
               Stay ahead of your schedule
             </span>
             {dueThisWeekCount > 0 && (
               <div
                 className="flex items-center gap-1.5 px-2.5 py-0.5"
                 style={{
-                  background: "rgba(99,102,241,0.12)",
+                  background: "rgba(59,130,246,0.12)",
                   borderRadius: 20,
-                  border: "1px solid rgba(99,102,241,0.25)",
+                  border: "1px solid rgba(59,130,246,0.25)",
                 }}
               >
-                <Clock size={10} color="#818cf8" strokeWidth={2} />
-                <span style={{ color: "#818cf8", fontSize: 10, fontWeight: 600 }}>
+                <Clock size={10} color="var(--accent)" strokeWidth={2} />
+                <span style={{ color: "var(--accent)", fontSize: 10, fontWeight: 600 }}>
                   {dueThisWeekCount} due this week
                 </span>
               </div>
@@ -335,9 +335,9 @@ export function DeadlinesScreen() {
                   className="flex items-center gap-1.5 whitespace-nowrap px-4 py-1.5 flex-shrink-0"
                   style={{
                     borderRadius: 24,
-                    background: active ? "rgba(99,102,241,0.18)" : "transparent",
-                    border: active ? "1px solid rgba(99,102,241,0.4)" : "1px solid #2d2d34",
-                    color: active ? "#f7f8f8" : "#8a8f98",
+                    background: active ? "rgba(59,130,246,0.18)" : "transparent",
+                    border: active ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--border)",
+                    color: active ? "var(--text)" : "var(--text-3)",
                     fontSize: 13,
                     fontWeight: active ? 600 : 400,
                   }}
@@ -359,7 +359,7 @@ export function DeadlinesScreen() {
       {/* Main Screen Content */}
       <div className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: "none", paddingBottom: 110 }}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3 text-[#8a8f98]">
+          <div className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--text-3)]">
             <Loader2 className="animate-spin" size={24} />
             <span className="text-xs">Fetching deadline logs...</span>
           </div>
@@ -369,13 +369,13 @@ export function DeadlinesScreen() {
             {filteredListDeadlines.length > 0 && (
               <div
                 className="absolute left-[19px] top-4 bottom-4 w-px"
-                style={{ background: "linear-gradient(to bottom, #2d2d34, transparent)" }}
+                style={{ background: "linear-gradient(to bottom, var(--border), transparent)" }}
               />
             )}
 
             <div className="flex flex-col gap-3">
               {filteredListDeadlines.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-[#8a8f98] gap-1">
+                <div className="flex flex-col items-center justify-center py-16 text-[var(--text-3)] gap-1">
                   <span className="text-sm font-semibold">Clean Slate!</span>
                   <span className="text-xs opacity-0.7">No deadlines in this range.</span>
                 </div>
@@ -411,7 +411,7 @@ export function DeadlinesScreen() {
                         onClick={() => setSelectedEventId(item.id)}
                         className="flex-1 flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer"
                         style={{
-                          background: style.bgAccent || "#1c1c21",
+                          background: style.bgAccent || "var(--surface)",
                           border: `1px solid ${style.borderColor}`,
                           borderRadius: 16,
                           opacity: isDone ? 0.7 : 1,
@@ -421,7 +421,7 @@ export function DeadlinesScreen() {
                           <div className="flex items-start gap-2 mb-1">
                             <span
                               style={{
-                                color: isDone ? "#8a8f98" : "#f7f8f8",
+                                color: isDone ? "var(--text-3)" : "var(--text)",
                                 fontSize: 14,
                                 fontWeight: 600,
                                 lineHeight: 1.3,
@@ -459,8 +459,8 @@ export function DeadlinesScreen() {
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <Clock size={10} color="#8a8f98" strokeWidth={2} />
-                            <span style={{ color: "#8a8f98", fontSize: 12 }}>
+                            <Clock size={10} color="var(--text-3)" strokeWidth={2} />
+                            <span style={{ color: "var(--text-3)", fontSize: 12 }}>
                               {isDone ? "Completed" : formatDueText(item.deadline, item.urgency_label || "upcoming")}
                             </span>
                           </div>
@@ -468,8 +468,8 @@ export function DeadlinesScreen() {
                             <span
                               className="mt-1.5 inline-block px-2 py-0.5"
                               style={{
-                                background: "#2d2d34",
-                                color: "#8a8f98",
+                                background: "var(--border)",
+                                color: "var(--text-3)",
                                 fontSize: 10,
                                 borderRadius: 6,
                               }}
@@ -486,12 +486,12 @@ export function DeadlinesScreen() {
                             className="flex items-center justify-center w-7 h-7 rounded-full"
                             style={{
                               background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
-                              border: `1.5px solid ${isDone ? "#10b981" : "#2d2d34"}`,
+                              border: `1.5px solid ${isDone ? "#10b981" : "var(--border)"}`,
                             }}
                           >
                             <CheckCircle2
                               size={14}
-                              color={isDone ? "#10b981" : "#8a8f98"}
+                              color={isDone ? "#10b981" : "var(--text-3)"}
                               strokeWidth={2}
                             />
                           </motion.button>
@@ -507,30 +507,30 @@ export function DeadlinesScreen() {
           /* MONTHLY GRID CALENDAR VIEW */
           <div className="flex flex-col gap-4">
             {/* Calendar Month Header */}
-            <div className="flex items-center justify-between px-2 py-1 bg-[#1c1c21] border border-[#2d2d34] rounded-2xl">
+            <div className="flex items-center justify-between px-2 py-1 bg-[var(--surface)] border border-[var(--border)] rounded-2xl">
               <button
                 onClick={prevMonth}
-                className="p-2 rounded-xl bg-transparent hover:bg-[#2d2d34] text-[#8a8f98] active:scale-95 transition-all"
+                className="p-2 rounded-xl bg-transparent hover:bg-[var(--border)] text-[var(--text-3)] active:scale-95 transition-all"
               >
                 <ChevronLeft size={16} />
               </button>
-              <span style={{ color: "#f7f8f8", fontSize: 14, fontWeight: 700 }}>
+              <span style={{ color: "var(--text)", fontSize: 14, fontWeight: 700 }}>
                 {monthNames[month]} {year}
               </span>
               <button
                 onClick={nextMonth}
-                className="p-2 rounded-xl bg-transparent hover:bg-[#2d2d34] text-[#8a8f98] active:scale-95 transition-all"
+                className="p-2 rounded-xl bg-transparent hover:bg-[var(--border)] text-[var(--text-3)] active:scale-95 transition-all"
               >
                 <ChevronRight size={16} />
               </button>
             </div>
 
             {/* Calendar Grid */}
-            <div className="bg-[#1c1c21] border border-[#2d2d34] rounded-2xl p-3 flex flex-col gap-2">
+            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-3 flex flex-col gap-2">
               {/* Weekday Names Header */}
-              <div className="grid grid-cols-7 text-center border-b border-[#2d2d34] pb-2">
+              <div className="grid grid-cols-7 text-center border-b border-[var(--border)] pb-2">
                 {weekdays.map((wd) => (
-                  <span key={wd} style={{ color: "#8a8f98", fontSize: 10, fontWeight: 600 }}>
+                  <span key={wd} style={{ color: "var(--text-3)", fontSize: 10, fontWeight: 600 }}>
                     {wd}
                   </span>
                 ))}
@@ -552,13 +552,13 @@ export function DeadlinesScreen() {
                       onClick={() => setSelectedDate(new Date(cell.year, cell.month, cell.day))}
                       className="flex flex-col items-center justify-center py-1.5 cursor-pointer relative rounded-xl transition-all"
                       style={{
-                        background: isSelected ? "#6366f1" : "transparent",
+                        background: isSelected ? "var(--accent)" : "transparent",
                         opacity: cell.isPadding ? 0.3 : 1,
                       }}
                     >
                       <span
                         style={{
-                          color: isSelected ? "white" : "#f7f8f8",
+                          color: isSelected ? "white" : "var(--text)",
                           fontSize: 12,
                           fontWeight: isSelected ? 700 : 500,
                         }}
@@ -576,8 +576,8 @@ export function DeadlinesScreen() {
 
             {/* Selected Date Header details */}
             <div className="flex items-center gap-2 mt-2 px-1">
-              <CalendarIcon size={14} color="#818cf8" />
-              <span style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}>
+              <CalendarIcon size={14} color="var(--accent)" />
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>
                 Due on {selectedDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
@@ -585,8 +585,8 @@ export function DeadlinesScreen() {
             {/* List of cards due on selected date */}
             <div className="flex flex-col gap-2">
               {selectedDateDeadlines.length === 0 ? (
-                <div className="py-8 text-center bg-[#1c1c21]/40 border border-dashed border-[#2d2d34] rounded-2xl">
-                  <span style={{ color: "#8a8f98", fontSize: 12 }}>No deadlines due on this day.</span>
+                <div className="py-8 text-center bg-[var(--surface)]/40 border border-dashed border-[var(--border)] rounded-2xl">
+                  <span style={{ color: "var(--text-3)", fontSize: 12 }}>No deadlines due on this day.</span>
                 </div>
               ) : (
                 selectedDateDeadlines.map((item) => {
@@ -596,7 +596,7 @@ export function DeadlinesScreen() {
                     <div
                       key={item.id}
                       onClick={() => setSelectedEventId(item.id)}
-                      className="flex items-center justify-between gap-3 px-4 py-3 bg-[#1c1c21] border rounded-2xl cursor-pointer"
+                      className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--surface)] border rounded-2xl cursor-pointer"
                       style={{
                         borderColor: style.borderColor,
                         opacity: isDone ? 0.7 : 1,
@@ -606,7 +606,7 @@ export function DeadlinesScreen() {
                         <div className="flex items-center gap-2 mb-0.5">
                           <span
                             style={{
-                              color: isDone ? "#8a8f98" : "#f7f8f8",
+                              color: isDone ? "var(--text-3)" : "var(--text)",
                               fontSize: 13,
                               fontWeight: 600,
                               textDecoration: isDone ? "line-through" : "none",
@@ -625,7 +625,7 @@ export function DeadlinesScreen() {
                             {isDone ? "Done" : item.urgency_label}
                           </span>
                         </div>
-                        <span style={{ color: "#8a8f98", fontSize: 11 }}>
+                        <span style={{ color: "var(--text-3)", fontSize: 11 }}>
                           {isDone ? "Completed" : formatDueText(item.deadline, item.urgency_label || "upcoming")}
                         </span>
                       </div>
@@ -636,12 +636,12 @@ export function DeadlinesScreen() {
                           className="flex items-center justify-center w-6.5 h-6.5 rounded-full"
                           style={{
                             background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
-                            border: `1.5px solid ${isDone ? "#10b981" : "#2d2d34"}`,
+                            border: `1.5px solid ${isDone ? "#10b981" : "var(--border)"}`,
                           }}
                         >
                           <CheckCircle2
                             size={12}
-                            color={isDone ? "#10b981" : "#8a8f98"}
+                            color={isDone ? "#10b981" : "var(--text-3)"}
                             strokeWidth={2}
                           />
                         </motion.button>

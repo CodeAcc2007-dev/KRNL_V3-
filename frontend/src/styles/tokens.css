@@ -1,0 +1,27 @@
+/* KRNL design tokens — dark-refined, single blue accent. Tweak here to shift the whole app. */
+:root {
+  --bg: #0a0a0b;          /* base background (true neutral, not blue-black) */
+  --surface: #161617;     /* cards / rows */
+  --surface-2: #202022;   /* controls / avatars */
+  --border: rgba(255, 255, 255, 0.07);        /* hairline */
+  --border-strong: rgba(255, 255, 255, 0.12); /* floating bar / emphasis */
+
+  --text: #f4f4f5;        /* primary */
+  --text-2: #a1a1aa;      /* secondary */
+  --text-3: #71717a;      /* tertiary / muted */
+
+  --accent: #3b82f6;                       /* single blue accent */
+  --accent-weak: rgba(59, 130, 246, 0.14); /* accent fill for active states */
+  --danger: #f87171;      /* deadlines / overdue */
+
+  --radius: 12px;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}

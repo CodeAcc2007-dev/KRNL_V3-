@@ -35,7 +35,7 @@ export function LoginScreen({ oauthError }: { oauthError?: string | null }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-6 relative" style={{ background: "#08090a" }}>
+    <div className="flex flex-col items-center justify-center h-full px-6 relative" style={{ background: "var(--bg)" }}>
       {/* Background ambient glow effect */}
       <div 
         className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full filter blur-[80px] opacity-15 pointer-events-none"
@@ -50,7 +50,7 @@ export function LoginScreen({ oauthError }: { oauthError?: string | null }) {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative flex items-center justify-center w-20 h-20 rounded-[24px] mb-8 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.15)] bg-gradient-to-br from-[#0c0d0e] to-[#08090a]"
+          className="relative flex items-center justify-center w-20 h-20 rounded-[24px] mb-8 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.15)] bg-gradient-to-br from-[#0c0d0e] to-[var(--bg)]"
         >
           <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>

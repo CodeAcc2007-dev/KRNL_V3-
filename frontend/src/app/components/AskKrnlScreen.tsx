@@ -37,7 +37,7 @@ function renderAIText(text: string) {
         {parts.map((part, j) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
-              <strong key={j} style={{ color: "#f7f8f8", fontWeight: 600 }}>
+              <strong key={j} style={{ color: "var(--text)", fontWeight: 600 }}>
                 {part.slice(2, -2)}
               </strong>
             );
@@ -48,7 +48,7 @@ function renderAIText(text: string) {
               <sup
                 key={j}
                 style={{
-                  color: "#6366f1",
+                  color: "var(--accent)",
                   fontSize: 10,
                   fontWeight: 700,
                   verticalAlign: "super",
@@ -147,13 +147,13 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
   };
 
   return (
-    <div className="flex flex-col h-full relative" style={{ background: "#08090a" }}>
+    <div className="flex flex-col h-full relative" style={{ background: "var(--bg)" }}>
       {/* Header */}
       <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         <div className="px-4 pb-3 flex items-center justify-between">
           <div>
             <span
-              style={{ color: "#f7f8f8", fontSize: 20, fontWeight: 700, display: "block" }}
+              style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, display: "block" }}
             >
               Ask KRNL
             </span>
@@ -171,15 +171,15 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
           <div
             className="flex items-center justify-center w-9 h-9 rounded-xl"
             style={{
-              background: "rgba(99,102,241,0.12)",
-              border: "1px solid rgba(99,102,241,0.25)",
+              background: "rgba(59,130,246,0.12)",
+              border: "1px solid rgba(59,130,246,0.25)",
             }}
           >
-            <span style={{ color: "#818cf8", fontSize: 15, fontWeight: 700 }}>K</span>
+            <span style={{ color: "var(--accent)", fontSize: 15, fontWeight: 700 }}>K</span>
           </div>
         </div>
 
-        <div style={{ height: 1, background: "#2d2d34", margin: "0 16px" }} />
+        <div style={{ height: 1, background: "var(--border)", margin: "0 16px" }} />
       </div>
 
       {/* Messages */}
@@ -200,10 +200,10 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                 <div
                   className="max-w-[80%] px-4 py-2.5"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: "18px 18px 4px 18px",
-                    color: "#f7f8f8",
+                    color: "var(--text)",
                     fontSize: 14,
                     lineHeight: 1.5,
                   }}
@@ -216,7 +216,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                   <div
                     className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5"
                     style={{
-                      background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)",
+                      background: "linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%)",
                       fontSize: 12,
                       fontWeight: 700,
                       color: "white",
@@ -229,7 +229,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                       className="px-4 py-3"
                       style={{
                         background: "rgba(28,28,33,0.8)",
-                        border: "1px solid #2d2d34",
+                        border: "1px solid var(--border)",
                         borderRadius: "4px 18px 18px 18px",
                         color: "#c8cdd6",
                       }}
@@ -244,18 +244,18 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                           <div
                             key={c.id}
                             onClick={() => handleCitationClick(c)}
-                            className="flex items-center gap-1 px-2.5 py-1 cursor-pointer hover:bg-rgba(99,102,241,0.2) active:scale-95 transition-all"
+                            className="flex items-center gap-1 px-2.5 py-1 cursor-pointer hover:bg-rgba(59,130,246,0.2) active:scale-95 transition-all"
                             style={{
-                              background: "rgba(99,102,241,0.1)",
-                              border: "1px solid rgba(99,102,241,0.3)",
+                              background: "rgba(59,130,246,0.1)",
+                              border: "1px solid rgba(59,130,246,0.3)",
                               borderRadius: 8,
                             }}
                           >
-                            <span style={{ color: "#818cf8", fontSize: 10, fontWeight: 700 }}>
+                            <span style={{ color: "var(--accent)", fontSize: 10, fontWeight: 700 }}>
                               [{c.id}]
                             </span>
-                            <span style={{ color: "#818cf8", fontSize: 11 }}>{c.label}</span>
-                            <ExternalLink size={9} color="#6366f1" strokeWidth={2} />
+                            <span style={{ color: "var(--accent)", fontSize: 11 }}>{c.label}</span>
+                            <ExternalLink size={9} color="var(--accent)" strokeWidth={2} />
                           </div>
                         ))}
                       </div>
@@ -278,7 +278,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
             >
               <div
                 className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, #4f46e5, #6366f1)" }}
+                style={{ background: "linear-gradient(135deg, var(--accent), var(--accent))" }}
               >
                 <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>K</span>
               </div>
@@ -286,7 +286,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                 className="px-4 py-3 flex items-center gap-1"
                 style={{
                   background: "rgba(28,28,33,0.8)",
-                  border: "1px solid #2d2d34",
+                  border: "1px solid var(--border)",
                   borderRadius: "4px 18px 18px 18px",
                 }}
               >
@@ -294,7 +294,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                   <motion.div
                     key={i}
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#8a8f98" }}
+                    style={{ background: "var(--text-3)" }}
                     animate={{ opacity: [0.3, 1, 0.3] }}
                     transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                   />
@@ -315,8 +315,8 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
         <div
           className="flex items-center gap-2 px-4 py-2"
           style={{
-            background: "#1c1c21",
-            border: "1px solid #2d2d34",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: 28,
           }}
         >
@@ -325,7 +325,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Search or ask about your emails..."
-            className="flex-1 bg-transparent outline-none text-[#f7f8f8] text-sm"
+            className="flex-1 bg-transparent outline-none text-[var(--text)] text-sm"
           />
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -333,13 +333,13 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
             className="flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0"
             style={{
               background: inputValue.trim()
-                ? "linear-gradient(135deg, #4f46e5, #6366f1)"
+                ? "linear-gradient(135deg, var(--accent), var(--accent))"
                 : "rgba(45,45,52,0.8)",
             }}
           >
             <Send
               size={14}
-              color={inputValue.trim() ? "white" : "#8a8f98"}
+              color={inputValue.trim() ? "white" : "var(--text-3)"}
               strokeWidth={2}
             />
           </motion.button>
@@ -365,19 +365,19 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-[#2d2d34] flex flex-col p-5 pb-8"
+              className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl border-t border-[var(--border)] flex flex-col p-5 pb-8"
               style={{
                 background: "#121215",
                 maxHeight: "75%",
               }}
             >
               {/* Drag Handle indicator */}
-              <div className="w-12 h-1 bg-[#2d2d34] rounded-full mx-auto mb-4" />
+              <div className="w-12 h-1 bg-[var(--border)] rounded-full mx-auto mb-4" />
 
               {/* Close Button */}
               <button
                 onClick={() => setActiveEventId(null)}
-                className="absolute top-4 right-4 p-1 rounded-full bg-[#1c1c21] border border-[#2d2d34] text-[#8a8f98] hover:text-white"
+                className="absolute top-4 right-4 p-1 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--text-3)] hover:text-white"
               >
                 <X size={16} />
               </button>
@@ -385,7 +385,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
               {/* Detail Content */}
               <div className="overflow-y-auto flex-1 flex flex-col gap-4 mt-2 pr-1" style={{ scrollbarWidth: "none" }}>
                 {detailLoading ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-[#8a8f98]">
+                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-[var(--text-3)]">
                     <Loader2 className="animate-spin" size={24} />
                     <span className="text-xs">Loading event details...</span>
                   </div>
@@ -396,23 +396,23 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                 ) : eventDetail ? (
                   <>
                     <div>
-                      <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[#6366f1]/10 text-[#818cf8] border border-[#6366f1]/20">
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
                         {eventDetail.category || "General"}
                       </span>
-                      <h3 className="text-lg font-bold text-[#f7f8f8] mt-1.5 leading-tight">
+                      <h3 className="text-lg font-bold text-[var(--text)] mt-1.5 leading-tight">
                         {eventDetail.display_name}
                       </h3>
                     </div>
 
-                    <div className="flex flex-col gap-2 p-3 rounded-2xl bg-[#1c1c21] border border-[#2d2d34]">
+                    <div className="flex flex-col gap-2 p-3 rounded-2xl bg-[var(--surface)] border border-[var(--border)]">
                       {eventDetail.deadline && (
-                        <div className="flex items-center gap-2 text-xs text-[#8a8f98]">
-                          <Clock size={12} className="text-[#818cf8]" />
+                        <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
+                          <Clock size={12} className="text-[var(--accent)]" />
                           <span>Due: {new Date(eventDetail.deadline).toLocaleString()}</span>
                         </div>
                       )}
                       {eventDetail.venue && (
-                        <div className="flex items-center gap-2 text-xs text-[#8a8f98]">
+                        <div className="flex items-center gap-2 text-xs text-[var(--text-3)]">
                           <MapPin size={12} className="text-[#10b981]" />
                           <span>Venue: {eventDetail.venue}</span>
                         </div>
@@ -420,7 +420,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-xs font-semibold text-[#8a8f98]">CONTEXT / SUMMARY</span>
+                      <span className="text-xs font-semibold text-[var(--text-3)]">CONTEXT / SUMMARY</span>
                       <p className="text-sm text-[#c8cdd6] leading-relaxed whitespace-pre-wrap">
                         {eventDetail.full_body || eventDetail.raw_summary || "No description provided."}
                       </p>
@@ -428,7 +428,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
 
                     {eventDetail.links && eventDetail.links.length > 0 && (
                       <div className="flex flex-col gap-2 mt-2">
-                        <span className="text-xs font-semibold text-[#8a8f98]">ACTION LINKS</span>
+                        <span className="text-xs font-semibold text-[var(--text-3)]">ACTION LINKS</span>
                         <div className="flex flex-col gap-1.5">
                           {eventDetail.links.map((link: string, idx: number) => (
                             <a
@@ -436,7 +436,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
                               href={link}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex items-center gap-1.5 text-xs text-[#818cf8] hover:underline"
+                              className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:underline"
                             >
                               <ExternalLink size={11} />
                               <span className="truncate">{link}</span>

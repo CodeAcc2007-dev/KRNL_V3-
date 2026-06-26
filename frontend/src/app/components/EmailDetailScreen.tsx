@@ -52,17 +52,17 @@ interface EmailDetailScreenProps {
 }
 
 const priorityConfig = {
-  High: { color: "#ef4444", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)" },
+  High: { color: "var(--danger)", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)" },
   Med: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.2)" },
-  Low: { color: "#8a8f98", bg: "rgba(138,143,152,0.08)", border: "rgba(138,143,152,0.15)" },
+  Low: { color: "var(--text-3)", bg: "rgba(138,143,152,0.08)", border: "rgba(138,143,152,0.15)" },
 };
 
 const urgencyConfig: Record<string, { label: string; color: string; bg: string }> = {
-  expired: { label: "Expired", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
-  today: { label: "Today", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
+  expired: { label: "Expired", color: "var(--text-3)", bg: "rgba(107,114,128,0.1)" },
+  today: { label: "Today", color: "var(--danger)", bg: "rgba(239,68,68,0.1)" },
   tomorrow: { label: "Tomorrow", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  this_week: { label: "This Week", color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
-  upcoming: { label: "Upcoming", color: "#8a8f98", bg: "rgba(138,143,152,0.08)" },
+  this_week: { label: "This Week", color: "var(--accent)", bg: "rgba(59,130,246,0.1)" },
+  upcoming: { label: "Upcoming", color: "var(--text-3)", bg: "rgba(138,143,152,0.08)" },
 };
 
 export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailScreenProps) {
@@ -70,6 +70,17 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [bodyExpanded, setBodyExpanded] = useState(false);
+
+  // Make the device/browser Back button close this detail (return to the list)
+  // instead of navigating away from the app. Opening pushes a history entry;
+  // Back pops it and we close the overlay.
+  useEffect(() => {
+    window.history.pushState({ krnlDetail: true }, "");
+    const handlePop = () => onBack();
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     async function fetchDetail() {
@@ -177,29 +188,29 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
       exit={{ x: "100%", opacity: 0 }}
       transition={{ type: "spring", stiffness: 350, damping: 35, mass: 0.8 }}
       className="absolute inset-0 flex flex-col z-30"
-      style={{ background: "#08090a" }}
+      style={{ background: "var(--bg)" }}
     >
       {/* Header */}
       <div style={{ paddingTop: "var(--status-bar-pad)" }}>
         <div className="flex items-center gap-3 px-4 pb-4">
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={onBack}
+            onClick={() => window.history.back()}
             className="flex items-center justify-center w-9 h-9 rounded-xl"
-            style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
           >
-            <ArrowLeft size={18} color="#f7f8f8" strokeWidth={1.8} />
+            <ArrowLeft size={18} color="var(--text)" strokeWidth={1.8} />
           </motion.button>
 
           <div className="flex-1 min-w-0">
             <span
               className="block truncate"
-              style={{ color: "#f7f8f8", fontSize: 15, fontWeight: 600 }}
+              style={{ color: "var(--text)", fontSize: 15, fontWeight: 600 }}
             >
               {displayEvent?.display_name || "Loading..."}
             </span>
             {displayEvent?.created_at && (
-              <span style={{ color: "#8a8f98", fontSize: 11 }}>
+              <span style={{ color: "var(--text-3)", fontSize: 11 }}>
                 {formatRelativeTime(displayEvent.created_at)}
               </span>
             )}
@@ -238,7 +249,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
 
         {/* Loading skeleton or content */}
         {loading && !previewData ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-[#8a8f98]">
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-[var(--text-3)]">
             <Loader2 className="animate-spin" size={24} />
             <span className="text-xs">Loading details...</span>
           </div>
@@ -251,8 +262,8 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
               transition={{ delay: 0.05, duration: 0.3 }}
               className="flex items-center gap-3 p-4"
               style={{
-                background: "#1c1c21",
-                border: "1px solid #2d2d34",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
                 borderRadius: 16,
               }}
             >
@@ -261,11 +272,11 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 style={{
                   width: 46,
                   height: 46,
-                  background: "linear-gradient(135deg, #6366f1 0%, #818cf8 100%)",
+                  background: "linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%)",
                   color: "white",
                   fontSize: 18,
                   fontWeight: 700,
-                  boxShadow: "0 4px 16px rgba(99,102,241,0.3)",
+                  boxShadow: "0 4px 16px rgba(59,130,246,0.3)",
                 }}
               >
                 {displayEvent.display_name?.charAt(0).toUpperCase() || "E"}
@@ -273,11 +284,11 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
               <div className="flex-1 min-w-0">
                 <span
                   className="block truncate"
-                  style={{ color: "#f7f8f8", fontSize: 15, fontWeight: 600 }}
+                  style={{ color: "var(--text)", fontSize: 15, fontWeight: 600 }}
                 >
                   {displayEvent.display_name}
                 </span>
-                <span style={{ color: "#8a8f98", fontSize: 11 }}>
+                <span style={{ color: "var(--text-3)", fontSize: 11 }}>
                   {formatFullDate(displayEvent.created_at)}
                 </span>
               </div>
@@ -295,17 +306,17 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 <div
                   className="flex items-center gap-2 px-3 py-2.5"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
                   }}
                 >
-                  <Calendar size={14} color="#ef4444" strokeWidth={1.8} />
+                  <Calendar size={14} color="var(--danger)" strokeWidth={1.8} />
                   <div className="flex flex-col">
-                    <span style={{ color: "#8a8f98", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       Deadline
                     </span>
-                    <span style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 500 }}>
+                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 500 }}>
                       {formatFullDate(displayEvent.deadline).split(",").slice(0, 2).join(",")}
                     </span>
                   </div>
@@ -317,19 +328,19 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 <div
                   className="flex items-center gap-2 px-3 py-2.5"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
                   }}
                 >
-                  <MapPin size={14} color="#3b82f6" strokeWidth={1.8} />
+                  <MapPin size={14} color="var(--accent)" strokeWidth={1.8} />
                   <div className="flex flex-col">
-                    <span style={{ color: "#8a8f98", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       Venue
                     </span>
                     <span
                       className="truncate"
-                      style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 500, maxWidth: 120 }}
+                      style={{ color: "var(--text)", fontSize: 12, fontWeight: 500, maxWidth: 120 }}
                     >
                       {displayEvent.venue}
                     </span>
@@ -342,17 +353,17 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 <div
                   className="flex items-center gap-2 px-3 py-2.5"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
                   }}
                 >
-                  <Tag size={14} color="#a78bfa" strokeWidth={1.8} />
+                  <Tag size={14} color="var(--accent)" strokeWidth={1.8} />
                   <div className="flex flex-col">
-                    <span style={{ color: "#8a8f98", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       Category
                     </span>
-                    <span style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 500 }}>
+                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 500 }}>
                       {displayEvent.category}
                     </span>
                   </div>
@@ -364,19 +375,19 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 <div
                   className="flex items-center gap-2 px-3 py-2.5"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
                   }}
                 >
-                  <Clock size={14} color={urgencyConfig[displayEvent.urgency_label]?.color || "#8a8f98"} strokeWidth={1.8} />
+                  <Clock size={14} color={urgencyConfig[displayEvent.urgency_label]?.color || "var(--text-3)"} strokeWidth={1.8} />
                   <div className="flex flex-col">
-                    <span style={{ color: "#8a8f98", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
                       Urgency
                     </span>
                     <span
                       style={{
-                        color: urgencyConfig[displayEvent.urgency_label]?.color || "#f7f8f8",
+                        color: urgencyConfig[displayEvent.urgency_label]?.color || "var(--text)",
                         fontSize: 12,
                         fontWeight: 600,
                       }}
@@ -401,10 +412,10 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                     key={idx}
                     className="px-2.5 py-1"
                     style={{
-                      background: "rgba(99,102,241,0.1)",
-                      border: "1px solid rgba(99,102,241,0.2)",
+                      background: "rgba(59,130,246,0.1)",
+                      border: "1px solid rgba(59,130,246,0.2)",
                       borderRadius: 8,
-                      color: "#818cf8",
+                      color: "var(--accent)",
                       fontSize: 11,
                       fontWeight: 500,
                     }}
@@ -423,28 +434,27 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 transition={{ delay: 0.2, duration: 0.3 }}
                 className="p-4"
                 style={{
-                  background: "linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%)",
-                  border: "1px solid rgba(99,102,241,0.15)",
-                  borderRadius: 16,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
                 }}
               >
                 <div className="flex items-center gap-2 mb-2.5">
-                  <Sparkles size={13} color="#818cf8" strokeWidth={2} />
                   <span
                     style={{
-                      color: "#818cf8",
+                      color: "var(--text-3)",
                       fontSize: 10,
                       fontWeight: 600,
                       textTransform: "uppercase",
                       letterSpacing: "0.1em",
                     }}
                   >
-                    AI Summary
+                    Summary
                   </span>
                 </div>
                 <p
                   style={{
-                    color: "#e4e5e7",
+                    color: "var(--text-2)",
                     fontSize: 13,
                     lineHeight: 1.65,
                     fontWeight: 400,
@@ -462,8 +472,8 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25, duration: 0.3 }}
                 style={{
-                  background: "#1c1c21",
-                  border: "1px solid #2d2d34",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 16,
                   overflow: "hidden",
                   flexShrink: 0,
@@ -476,7 +486,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 >
                   <span
                     style={{
-                      color: "#8a8f98",
+                      color: "var(--text-3)",
                       fontSize: 10,
                       fontWeight: 600,
                       textTransform: "uppercase",
@@ -489,7 +499,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                     animate={{ rotate: bodyExpanded ? 90 : 0 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <ChevronRight size={16} color="#8a8f98" strokeWidth={2} />
+                    <ChevronRight size={16} color="var(--text-3)" strokeWidth={2} />
                   </motion.div>
                 </button>
                 <AnimatePresence initial={false}>
@@ -504,7 +514,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                       <div
                         className="px-4 pb-4"
                         style={{
-                          color: "#c8cad0",
+                          color: "var(--text-2)",
                           fontSize: 13,
                           lineHeight: 1.7,
                           fontWeight: 400,
@@ -531,7 +541,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 <span
                   className="px-1"
                   style={{
-                    color: "#8a8f98",
+                    color: "var(--text-3)",
                     fontSize: 10,
                     fontWeight: 600,
                     textTransform: "uppercase",
@@ -548,20 +558,20 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                     rel="noopener noreferrer"
                     className="flex items-center gap-2.5 px-3 py-2.5"
                     style={{
-                      background: "#1c1c21",
-                      border: "1px solid #2d2d34",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: 12,
                       textDecoration: "none",
                     }}
                   >
-                    <Link2 size={13} color="#3b82f6" strokeWidth={1.8} />
+                    <Link2 size={13} color="var(--accent)" strokeWidth={1.8} />
                     <span
                       className="truncate flex-1"
-                      style={{ color: "#3b82f6", fontSize: 12, fontWeight: 500 }}
+                      style={{ color: "var(--accent)", fontSize: 12, fontWeight: 500 }}
                     >
                       {getDomainFromUrl(link)}
                     </span>
-                    <ExternalLink size={11} color="#8a8f98" strokeWidth={1.8} />
+                    <ExternalLink size={11} color="var(--text-3)" strokeWidth={1.8} />
                   </a>
                 ))}
               </motion.div>
@@ -573,22 +583,22 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4, duration: 0.3 }}
               className="flex flex-col gap-1 pt-2 pb-4"
-              style={{ borderTop: "1px solid #2d2d34" }}
+              style={{ borderTop: "1px solid var(--border)" }}
             >
               {displayEvent.created_at && (
-                <span style={{ color: "#555960", fontSize: 10 }}>
+                <span style={{ color: "var(--text-3)", fontSize: 10 }}>
                   Received: {formatFullDate(displayEvent.created_at)}
                 </span>
               )}
               {displayEvent.updated_at && (
-                <span style={{ color: "#555960", fontSize: 10 }}>
+                <span style={{ color: "var(--text-3)", fontSize: 10 }}>
                   Updated: {formatFullDate(displayEvent.updated_at)}
                 </span>
               )}
             </motion.div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-16 text-[#8a8f98] gap-2">
+          <div className="flex flex-col items-center justify-center py-16 text-[var(--text-3)] gap-2">
             <span style={{ fontSize: 13, fontWeight: 500 }}>Event not found</span>
             <span style={{ fontSize: 11, opacity: 0.7 }}>This email may have been removed.</span>
           </div>

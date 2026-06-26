@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw, Calendar, AlertCircle, Tag, Star, Loader2 } from "lucide-react";
+import { RefreshCw, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { apiCall } from "../lib/api";
 import { EmailDetailScreen } from "./EmailDetailScreen";
@@ -24,11 +24,6 @@ interface EventItem {
   last_update_type?: string | null;
 }
 
-const priorityColor = {
-  High: "#ef4444",
-  Med: "#f59e0b",
-  Low: "#8a8f98",
-};
 
 export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   // FUTURE_PROOF_HOOK: Custom Tab Configuration
@@ -215,7 +210,7 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   );
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
+    <div className="flex flex-col h-full" style={{ background: "var(--bg)" }}>
       {/* Safe area top */}
       <div style={{ paddingTop: "var(--status-bar-pad)" }}>
         {/* Header */}
@@ -227,14 +222,14 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
             title="Sync now"
             className="flex items-center justify-center w-9 h-9 rounded-xl"
             style={{
-              background: "#1c1c21",
-              border: "1px solid #2d2d34",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
               cursor: syncing ? "default" : "pointer",
             }}
           >
             <RefreshCw
               size={18}
-              color={syncing ? "#6366f1" : "#8a8f98"}
+              color={syncing ? "var(--accent)" : "var(--text-3)"}
               strokeWidth={1.8}
               className={syncing ? "animate-spin" : ""}
             />
@@ -242,7 +237,7 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
 
           <span
             className="tracking-[0.2em] uppercase"
-            style={{ color: "#f7f8f8", fontSize: 17, fontWeight: 700, letterSpacing: "0.18em" }}
+            style={{ color: "var(--text)", fontSize: 17, fontWeight: 700, letterSpacing: "0.18em" }}
           >
             KRNL
           </span>
@@ -250,13 +245,13 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
           <button onClick={onOpenSettings} className="relative">
             <div
               className="flex items-center justify-center w-9 h-9 rounded-full"
-              style={{ background: "#6366f1", fontWeight: 700, color: "white", fontSize: 15 }}
+              style={{ background: "var(--accent)", fontWeight: 700, color: "white", fontSize: 15 }}
             >
               R
             </div>
             <div
               className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full"
-              style={{ background: "#10b981", border: "2px solid #08090a" }}
+              style={{ background: "#22c55e", border: "2px solid var(--bg)" }}
             />
           </button>
         </div>
@@ -296,17 +291,15 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                 key={f}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setActiveFilter(f)}
-                className="flex items-center gap-1.5 whitespace-nowrap px-4 py-1.5 flex-shrink-0"
+                className="whitespace-nowrap px-3.5 py-1.5 flex-shrink-0"
                 style={{
-                  borderRadius: 24,
-                  background: active ? "rgba(99,102,241,0.18)" : "transparent",
-                  border: active ? "1px solid rgba(99,102,241,0.4)" : "1px solid #2d2d34",
-                  color: active ? "#f7f8f8" : "#8a8f98",
+                  borderRadius: 999,
+                  background: active ? "var(--accent-weak)" : "transparent",
+                  color: active ? "var(--accent)" : "var(--text-3)",
                   fontSize: 13,
-                  fontWeight: active ? 600 : 400,
+                  fontWeight: active ? 600 : 500,
                 }}
               >
-                {active && <Star size={11} fill="#f7f8f8" color="#f7f8f8" />}
                 {f}
               </motion.button>
             );
@@ -342,111 +335,76 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: Math.min(i * 0.05, 0.4), duration: 0.3 }}
-                className="flex items-center gap-3 px-3 py-3.5 cursor-pointer"
+                className="flex items-start gap-3 px-3.5 py-3 cursor-pointer"
                 onClick={() => setSelectedEventId(email.id)}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.99 }}
                 style={{
-                  background: "#1c1c21",
-                  border: "1px solid #2d2d34",
-                  borderRadius: 16,
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 12,
                 }}
               >
                 {/* Avatar */}
                 <div
                   className="flex items-center justify-center flex-shrink-0 rounded-full"
                   style={{
-                    width: 40,
-                    height: 40,
-                    background: "#6366f1",
-                    color: "white",
-                    fontSize: 15,
-                    fontWeight: 700,
+                    width: 38,
+                    height: 38,
+                    background: "var(--surface-2)",
+                    color: "var(--text-2)",
+                    fontSize: 14,
+                    fontWeight: 600,
                   }}
                 >
                   {email.display_name ? email.display_name.charAt(0).toUpperCase() : "E"}
                 </div>
 
-                {/* Text Stack */}
+                {/* Text stack */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span
-                      className="truncate"
-                      style={{
-                        color: "#f7f8f8",
-                        fontSize: 14,
-                        fontWeight: 600,
-                      }}
+                      className="truncate flex-1"
+                      style={{ color: "var(--text)", fontSize: 14, fontWeight: 600 }}
                     >
                       {email.display_name}
                     </span>
+                    <span
+                      className="flex items-center gap-1.5 flex-shrink-0"
+                      style={{ color: "var(--text-3)", fontSize: 11 }}
+                    >
+                      {pLabel === "High" && (
+                        <span
+                          style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--danger)" }}
+                        />
+                      )}
+                      {getTimeLabel(email.email_date || email.created_at)}
+                    </span>
                   </div>
+
                   <span
-                    className="block truncate mt-0.5"
-                    style={{ color: "#8a8f98", fontSize: 12, lineHeight: 1.4 }}
+                    className="block truncate"
+                    style={{ color: "var(--text-3)", fontSize: 12.5, lineHeight: 1.45, marginTop: 2 }}
                   >
                     {email.raw_summary}
                   </span>
-                </div>
 
-                {/* Metadata icon group */}
-                <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                  {/* Time */}
-                  <span style={{ color: "#8a8f98", fontSize: 10 }}>{getTimeLabel(email.email_date || email.created_at)}</span>
-
-                  {email.last_update_type && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: "#60a5fa",
-                        background: "rgba(59,130,246,0.15)",
-                        borderRadius: 4,
-                        padding: "1px 6px",
-                      }}
-                    >
-                      Update
-                    </span>
-                  )}
-
-                  {/* Deadline chip */}
-                  {email.deadline && (
-                    <div
-                      className="flex items-center gap-1 px-1.5 py-0.5"
-                      style={{
-                        background: "rgba(239,68,68,0.1)",
-                        borderRadius: 6,
-                        border: "1px solid rgba(239,68,68,0.2)",
-                      }}
-                    >
-                      <Calendar size={9} color="#ef4444" strokeWidth={2} />
-                      <span style={{ color: "#ef4444", fontSize: 9, fontWeight: 600 }}>
-                        {formatDeadline(email.deadline)}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Priority */}
-                  <div className="flex items-center gap-1">
-                    <AlertCircle
-                      size={10}
-                      color={priorityColor[pLabel as keyof typeof priorityColor]}
-                      strokeWidth={2}
-                    />
-                    <span
-                      style={{
-                        color: priorityColor[pLabel as keyof typeof priorityColor],
-                        fontSize: 9,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {pLabel}
-                    </span>
-                  </div>
-
-                  {/* Category */}
-                  {email.category && (
-                    <div className="flex items-center gap-1">
-                      <Tag size={9} color="#8a8f98" strokeWidth={2} />
-                      <span style={{ color: "#8a8f98", fontSize: 9 }}>{email.category}</span>
+                  {(email.deadline || email.last_update_type || email.category) && (
+                    <div className="flex items-center gap-2.5" style={{ marginTop: 6 }}>
+                      {email.deadline && (
+                        <span style={{ color: "var(--danger)", fontSize: 11, fontWeight: 600 }}>
+                          {formatDeadline(email.deadline)}
+                        </span>
+                      )}
+                      {email.last_update_type && (
+                        <span style={{ color: "var(--accent)", fontSize: 11, fontWeight: 500 }}>
+                          Updated
+                        </span>
+                      )}
+                      {email.category && (
+                        <span style={{ color: "var(--text-3)", fontSize: 11 }}>
+                          {email.category}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

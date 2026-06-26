@@ -273,18 +273,18 @@ export function SettingsScreen() {
 
 
   return (
-    <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
+    <div className="flex flex-col h-full" style={{ background: "var(--bg)" }}>
       <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         {/* Header */}
         <div className="px-4 pb-4">
-          <span style={{ color: "#f7f8f8", fontSize: 20, fontWeight: 700, display: "block" }}>
+          <span style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, display: "block" }}>
             Settings & Connections
           </span>
-          <span style={{ color: "#8a8f98", fontSize: 13, marginTop: 2, display: "block" }}>
+          <span style={{ color: "var(--text-3)", fontSize: 13, marginTop: 2, display: "block" }}>
             Manage your accounts and preferences
           </span>
         </div>
-        <div style={{ height: 1, background: "#2d2d34", margin: "0 16px 16px" }} />
+        <div style={{ height: 1, background: "var(--border)", margin: "0 16px 16px" }} />
       </div>
 
       <div
@@ -295,7 +295,7 @@ export function SettingsScreen() {
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <GoogleIcon size={13} />
-            <span style={{ color: "#8a8f98", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Google Account
             </span>
           </div>
@@ -329,7 +329,7 @@ export function SettingsScreen() {
                 <div className="flex-1 min-w-0">
                   <span
                     className="block truncate"
-                    style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}
+                    style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}
                   >
                     {email}
                   </span>
@@ -350,8 +350,8 @@ export function SettingsScreen() {
                     cursor: "pointer"
                   }}
                 >
-                  <LogOut size={12} color="#f87171" />
-                  <span style={{ color: "#f87171", fontSize: 11, fontWeight: 700 }}>SIGN OUT</span>
+                  <LogOut size={12} color="var(--danger)" />
+                  <span style={{ color: "var(--danger)", fontSize: 11, fontWeight: 700 }}>SIGN OUT</span>
                 </motion.button>
               </motion.div>
             ) : (
@@ -361,12 +361,12 @@ export function SettingsScreen() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="flex items-center justify-center px-4 py-6"
                 style={{
-                  background: "#1c1c21",
-                  border: "1px solid #2d2d34",
+                  background: "var(--surface)",
+                  border: "1px solid var(--border)",
                   borderRadius: 16,
                 }}
               >
-                <span style={{ color: "#8a8f98", fontSize: 13 }}>No active session found.</span>
+                <span style={{ color: "var(--text-3)", fontSize: 13 }}>No active session found.</span>
               </motion.div>
             )}
           </AnimatePresence>
@@ -375,14 +375,14 @@ export function SettingsScreen() {
         {/* Block 1: Connections */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <Shield size={13} color="#8a8f98" strokeWidth={2} />
-            <span style={{ color: "#8a8f98", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <Shield size={13} color="var(--text-3)" strokeWidth={2} />
+            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Connected Accounts
             </span>
           </div>
 
           {accountsLoading ? (
-            <div className="flex flex-col items-center justify-center py-6 gap-2 text-[#8a8f98]">
+            <div className="flex flex-col items-center justify-center py-6 gap-2 text-[var(--text-3)]">
               <Loader2 className="animate-spin" size={20} />
               <span style={{ fontSize: 11 }}>Loading accounts...</span>
             </div>
@@ -390,12 +390,12 @@ export function SettingsScreen() {
             <div
               className="flex items-center justify-center px-4 py-6 mb-3"
               style={{
-                background: "#1c1c21",
-                border: "1px dashed #2d2d34",
+                background: "var(--surface)",
+                border: "1px dashed var(--border)",
                 borderRadius: 16,
               }}
             >
-              <span style={{ color: "#8a8f98", fontSize: 13 }}>No connected email accounts.</span>
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>No connected email accounts.</span>
             </div>
           ) : (
             connectedAccounts.map((account) => {
@@ -419,8 +419,8 @@ export function SettingsScreen() {
                   key={account.id}
                   className="flex items-center gap-3 px-4 py-3.5 mb-2"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 16,
                   }}
                 >
@@ -436,7 +436,7 @@ export function SettingsScreen() {
                   <div className="flex-1 min-w-0">
                     <span
                       className="block truncate"
-                      style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}
+                      style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}
                     >
                       {account.email_address}
                     </span>
@@ -444,11 +444,11 @@ export function SettingsScreen() {
                       <div
                         className="w-1.5 h-1.5 rounded-full"
                         style={{
-                          background: account.connection_status === "connected" ? "#10b981" : "#ef4444",
+                          background: account.connection_status === "connected" ? "#10b981" : "var(--danger)",
                           boxShadow:
                             account.connection_status === "connected"
                               ? "0 0 5px #10b981"
-                              : "0 0 5px #ef4444",
+                              : "0 0 5px var(--danger)",
                         }}
                       />
                       <RefreshCw size={10} color="#10b981" strokeWidth={2} />
@@ -474,7 +474,7 @@ export function SettingsScreen() {
                       className="p-1 rounded hover:bg-red-500/10 transition-colors"
                       style={{ cursor: "pointer" }}
                     >
-                      <Trash2 size={14} color="#f87171" />
+                      <Trash2 size={14} color="var(--danger)" />
                     </motion.button>
                   </div>
                 </div>
@@ -493,18 +493,18 @@ export function SettingsScreen() {
               className="w-full flex items-center justify-center gap-2.5 py-4"
               style={{
                 background: "transparent",
-                border: "1.5px dashed #2d2d34",
+                border: "1.5px dashed var(--border)",
                 borderRadius: 16,
                 cursor: "pointer",
               }}
             >
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
-                <Plus size={14} color="#8a8f98" strokeWidth={2} />
+                <Plus size={14} color="var(--text-3)" strokeWidth={2} />
               </div>
-              <span style={{ color: "#8a8f98", fontSize: 13 }}>Connect IITB Webmail</span>
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Connect IITB Webmail</span>
             </motion.button>
 
             {/* Add Gmail (disabled) */}
@@ -512,18 +512,18 @@ export function SettingsScreen() {
               className="w-full flex items-center justify-center gap-2.5 py-4 opacity-50"
               style={{
                 background: "transparent",
-                border: "1.5px dashed #2d2d34",
+                border: "1.5px dashed var(--border)",
                 borderRadius: 16,
                 cursor: "not-allowed",
               }}
             >
               <div
                 className="w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "#1c1c21", border: "1px solid #2d2d34" }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
-                <Plus size={14} color="#8a8f98" strokeWidth={2} />
+                <Plus size={14} color="var(--text-3)" strokeWidth={2} />
               </div>
-              <span style={{ color: "#8a8f98", fontSize: 13 }}>Connect Gmail (Coming Soon)</span>
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Connect Gmail (Coming Soon)</span>
             </div>
           </div>
         </div>
@@ -531,8 +531,8 @@ export function SettingsScreen() {
         {/* Block 2: Career Track Preferences */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <Info size={13} color="#8a8f98" strokeWidth={2} />
-            <span style={{ color: "#8a8f98", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <Info size={13} color="var(--text-3)" strokeWidth={2} />
+            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Career Track
             </span>
           </div>
@@ -540,12 +540,12 @@ export function SettingsScreen() {
           <div
             className="px-4 py-4"
             style={{
-              background: "#1c1c21",
-              border: "1px solid #2d2d34",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 16,
             }}
           >
-            <p style={{ color: "#8a8f98", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
+            <p style={{ color: "var(--text-3)", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
               KRNL surfaces relevant opportunities and filters emails based on your selected tracks.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -559,9 +559,9 @@ export function SettingsScreen() {
                     className="px-4 py-1.5"
                     style={{
                       borderRadius: 24,
-                      background: active ? "rgba(99,102,241,0.18)" : "transparent",
-                      border: active ? "1px solid rgba(99,102,241,0.5)" : "1px solid #2d2d34",
-                      color: active ? "#818cf8" : "#8a8f98",
+                      background: active ? "rgba(59,130,246,0.18)" : "transparent",
+                      border: active ? "1px solid rgba(59,130,246,0.5)" : "1px solid var(--border)",
+                      color: active ? "var(--accent)" : "var(--text-3)",
                       fontSize: 13,
                       fontWeight: active ? 600 : 400,
                     }}
@@ -577,8 +577,8 @@ export function SettingsScreen() {
         {/* Block 3: System Details */}
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-3">
-            <Info size={13} color="#8a8f98" strokeWidth={2} />
-            <span style={{ color: "#8a8f98", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <Info size={13} color="var(--text-3)" strokeWidth={2} />
+            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               System
             </span>
           </div>
@@ -586,8 +586,8 @@ export function SettingsScreen() {
           <div
             className="px-4 py-4"
             style={{
-              background: "#1c1c21",
-              border: "1px solid #2d2d34",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 16,
             }}
           >
@@ -600,15 +600,15 @@ export function SettingsScreen() {
               <div
                 key={item.label}
                 className="flex items-center justify-between py-2.5"
-                style={{ borderBottom: "1px solid #2d2d34" }}
+                style={{ borderBottom: "1px solid var(--border)" }}
               >
-                <span style={{ color: "#8a8f98", fontSize: 13 }}>{item.label}</span>
-                <span style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 500 }}>{item.value}</span>
+                <span style={{ color: "var(--text-3)", fontSize: 13 }}>{item.label}</span>
+                <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>{item.value}</span>
               </div>
             ))}
             <div className="flex items-center justify-between py-2.5">
-              <span style={{ color: "#8a8f98", fontSize: 13 }}>Last full sync</span>
-              <span style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 500 }}>Just now</span>
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Last full sync</span>
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>Just now</span>
             </div>
           </div>
         </div>
@@ -616,8 +616,8 @@ export function SettingsScreen() {
         {/* Danger Zone */}
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={13} color="#ef4444" strokeWidth={2} />
-            <span style={{ color: "#ef4444", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            <AlertTriangle size={13} color="var(--danger)" strokeWidth={2} />
+            <span style={{ color: "var(--danger)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
               Danger Zone & Compliance
             </span>
           </div>
@@ -625,12 +625,12 @@ export function SettingsScreen() {
           <div
             className="px-4 py-4 mb-3"
             style={{
-              background: "#1c1c21",
-              border: "1px solid #2d2d34",
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
               borderRadius: 16,
             }}
           >
-            <p style={{ color: "#8a8f98", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
+            <p style={{ color: "var(--text-3)", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
               Under GDPR, you have the right to portability. Export all your user profile, events, and connected accounts data in a structured ZIP.
             </p>
             <motion.button
@@ -640,7 +640,7 @@ export function SettingsScreen() {
               className="w-full py-3 flex items-center justify-center gap-2"
               style={{
                 background: "rgba(255,255,255,0.04)",
-                border: "1px solid #2d2d34",
+                border: "1px solid var(--border)",
                 borderRadius: 12,
                 cursor: exporting ? "not-allowed" : "pointer"
               }}
@@ -658,12 +658,12 @@ export function SettingsScreen() {
                       borderTopColor: "#ffffff",
                     }}
                   />
-                  <span style={{ color: "#8a8f98", fontSize: 13 }}>Exporting...</span>
+                  <span style={{ color: "var(--text-3)", fontSize: 13 }}>Exporting...</span>
                 </>
               ) : (
                 <>
-                  <Shield size={14} color="#f7f8f8" />
-                  <span style={{ color: "#f7f8f8", fontSize: 13, fontWeight: 600 }}>Export My Data (ZIP)</span>
+                  <Shield size={14} color="var(--text)" />
+                  <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>Export My Data (ZIP)</span>
                 </>
               )}
             </motion.button>
@@ -684,12 +684,12 @@ export function SettingsScreen() {
                 }}
               >
                 <div className="flex gap-2.5 items-start">
-                  <AlertTriangle size={18} color="#f87171" className="flex-shrink-0 mt-0.5" />
+                  <AlertTriangle size={18} color="var(--danger)" className="flex-shrink-0 mt-0.5" />
                   <div>
-                    <span style={{ color: "#f87171", fontSize: 13, fontWeight: 600, display: "block" }}>
+                    <span style={{ color: "var(--danger)", fontSize: 13, fontWeight: 600, display: "block" }}>
                       Account Scheduled for Deletion
                     </span>
-                    <span style={{ color: "#8a8f98", fontSize: 12, marginTop: 4, display: "block", lineHeight: 1.4 }}>
+                    <span style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4, display: "block", lineHeight: 1.4 }}>
                       Your account data will be permanently wiped in 24 hours (due at {deletionDueAt ? new Date(deletionDueAt).toLocaleString() : ""}). You can cancel this anytime by clicking below.
                     </span>
                   </div>
@@ -723,12 +723,12 @@ export function SettingsScreen() {
                   borderRadius: 16,
                 }}
               >
-                <p style={{ color: "#f87171", fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+                <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
                   This will schedule your account and all data (emails, connected credentials, calendar syncs, vectors) for permanent deletion.
                 </p>
                 <div className="mb-4">
-                  <span style={{ color: "#8a8f98", fontSize: 11, display: "block", marginBottom: 6 }}>
-                    Type <strong style={{ color: "#ef4444" }}>DELETE</strong> to confirm:
+                  <span style={{ color: "var(--text-3)", fontSize: 11, display: "block", marginBottom: 6 }}>
+                    Type <strong style={{ color: "var(--danger)" }}>DELETE</strong> to confirm:
                   </span>
                   <input
                     type="text"
@@ -740,7 +740,7 @@ export function SettingsScreen() {
                       padding: "10px 12px",
                       color: "#ffffff",
                       background: "#0e0f11",
-                      border: "1px solid #2d2d34",
+                      border: "1px solid var(--border)",
                       borderRadius: 8,
                       outline: "none",
                       fontSize: 14,
@@ -756,10 +756,10 @@ export function SettingsScreen() {
                     }}
                     className="flex-1 py-2.5"
                     style={{
-                      background: "#1c1c21",
-                      border: "1px solid #2d2d34",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: 10,
-                      color: "#8a8f98",
+                      color: "var(--text-3)",
                       fontSize: 13,
                       fontWeight: 600,
                       cursor: "pointer"
@@ -776,7 +776,7 @@ export function SettingsScreen() {
                       background: deletionInput === "DELETE" ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.05)",
                       border: deletionInput === "DELETE" ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(239,68,68,0.15)",
                       borderRadius: 10,
-                      color: deletionInput === "DELETE" ? "#f87171" : "rgba(248,113,113,0.4)",
+                      color: deletionInput === "DELETE" ? "var(--danger)" : "rgba(248,113,113,0.4)",
                       fontSize: 13,
                       fontWeight: 600,
                       cursor: deletionInput === "DELETE" ? "pointer" : "not-allowed"
@@ -800,8 +800,8 @@ export function SettingsScreen() {
                   cursor: "pointer"
                 }}
               >
-                <Trash2 size={16} color="#f87171" strokeWidth={2} />
-                <span style={{ color: "#f87171", fontSize: 14, fontWeight: 600 }}>
+                <Trash2 size={16} color="var(--danger)" strokeWidth={2} />
+                <span style={{ color: "var(--danger)", fontSize: 14, fontWeight: 600 }}>
                   Disconnect Account & Wipe Data
                 </span>
               </motion.button>
@@ -826,14 +826,14 @@ export function SettingsScreen() {
               className="w-full max-w-md p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
               style={{
                 background: "#0e0f11",
-                border: "1px solid #2d2d34",
+                border: "1px solid var(--border)",
                 borderRadius: 24,
               }}
             >
-              <h3 style={{ color: "#f7f8f8", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+              <h3 style={{ color: "var(--text)", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
                 Connect IITB Webmail
               </h3>
-              <p style={{ color: "#8a8f98", fontSize: 13, marginBottom: 20 }}>
+              <p style={{ color: "var(--text-3)", fontSize: 13, marginBottom: 20 }}>
                 Link your IIT Bombay LDAP account to sync academic emails.
               </p>
 
@@ -848,7 +848,7 @@ export function SettingsScreen() {
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                  <label style={{ color: "var(--text)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
                     Webmail Email Address
                   </label>
                   <input
@@ -867,8 +867,8 @@ export function SettingsScreen() {
                       width: "100%",
                       padding: "12px 14px",
                       color: "#ffffff",
-                      background: "#1c1c21",
-                      border: "1px solid #2d2d34",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: 12,
                       outline: "none",
                       fontSize: 14,
@@ -877,7 +877,7 @@ export function SettingsScreen() {
                 </div>
 
                 <div>
-                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                  <label style={{ color: "var(--text)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
                     LDAP Username
                   </label>
                   <input
@@ -889,8 +889,8 @@ export function SettingsScreen() {
                       width: "100%",
                       padding: "12px 14px",
                       color: "#ffffff",
-                      background: "#1c1c21",
-                      border: "1px solid #2d2d34",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: 12,
                       outline: "none",
                       fontSize: 14,
@@ -899,7 +899,7 @@ export function SettingsScreen() {
                 </div>
 
                 <div>
-                  <label style={{ color: "#f7f8f8", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
+                  <label style={{ color: "var(--text)", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
                     LDAP Password / Access Token
                   </label>
                   <input
@@ -911,8 +911,8 @@ export function SettingsScreen() {
                       width: "100%",
                       padding: "12px 14px",
                       color: "#ffffff",
-                      background: "#1c1c21",
-                      border: "1px solid #2d2d34",
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
                       borderRadius: 12,
                       outline: "none",
                       fontSize: 14,
@@ -934,10 +934,10 @@ export function SettingsScreen() {
                   disabled={connectionLoading}
                   className="flex-1 py-3"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
-                    color: "#8a8f98",
+                    color: "var(--text-3)",
                     fontSize: 14,
                     fontWeight: 600,
                     cursor: connectionLoading ? "not-allowed" : "pointer"
@@ -951,7 +951,7 @@ export function SettingsScreen() {
                   disabled={connectionLoading || !ldapEmail || !ldapUsername || !ldapPassword}
                   className="flex-1 py-3 flex items-center justify-center gap-2"
                   style={{
-                    background: (ldapEmail && ldapUsername && ldapPassword) ? "#6366f1" : "rgba(99,102,241,0.2)",
+                    background: (ldapEmail && ldapUsername && ldapPassword) ? "var(--accent)" : "rgba(59,130,246,0.2)",
                     borderRadius: 12,
                     color: (ldapEmail && ldapUsername && ldapPassword) ? "#ffffff" : "rgba(255,255,255,0.4)",
                     fontSize: 14,
@@ -990,15 +990,15 @@ export function SettingsScreen() {
               className="w-full max-w-sm p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
               style={{
                 background: "#0e0f11",
-                border: "1px solid #2d2d34",
+                border: "1px solid var(--border)",
                 borderRadius: 24,
               }}
             >
-              <h3 style={{ color: "#f87171", fontSize: 16, fontWeight: 700, marginBottom: 8 }} className="flex items-center gap-2">
+              <h3 style={{ color: "var(--danger)", fontSize: 16, fontWeight: 700, marginBottom: 8 }} className="flex items-center gap-2">
                 <AlertTriangle size={18} />
                 Disconnect Account?
               </h3>
-              <p style={{ color: "#8a8f98", fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
+              <p style={{ color: "var(--text-3)", fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
                 Are you sure you want to disconnect this email account? This will stop future email syncs.
               </p>
 
@@ -1009,10 +1009,10 @@ export function SettingsScreen() {
                   disabled={confirmDeleteLoading}
                   className="flex-1 py-3"
                   style={{
-                    background: "#1c1c21",
-                    border: "1px solid #2d2d34",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     borderRadius: 12,
-                    color: "#8a8f98",
+                    color: "var(--text-3)",
                     fontSize: 14,
                     fontWeight: 600,
                     cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
@@ -1029,7 +1029,7 @@ export function SettingsScreen() {
                     background: "rgba(239,68,68,0.15)",
                     border: "1px solid rgba(239,68,68,0.4)",
                     borderRadius: 12,
-                    color: "#f87171",
+                    color: "var(--danger)",
                     fontSize: 14,
                     fontWeight: 600,
                     cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
