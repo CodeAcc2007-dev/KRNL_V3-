@@ -25,6 +25,11 @@ at rest.
 
 ## Status at a glance
 
+- **2026-06-26 — Frontend bugfixes + mobile bring-up + redesign IN PROGRESS.** See
+  [session log](docs/sessions/2026-06-26-bugfixes-mobile-redesign.md). Active branch:
+  **`redesign`**; old look preserved on **`pre-redesign-backup`**. Redesign done for Inbox,
+  floating nav, Email Detail (+ device Back closes detail); **remaining: Ask KRNL, Deadlines,
+  Settings, Login.** Dev-only mobile/LAN/OAuth changes logged in PRODUCTION_CLEANUP.md.
 - **Branch:** `phase-1-quota-data-integrity` (main = Initial commit, kept as rollback point).
 - **Done:** Phase 0, Phase 1 (dedup, batch embeddings, is_update/update_type), duplicate
   cleanup applied.

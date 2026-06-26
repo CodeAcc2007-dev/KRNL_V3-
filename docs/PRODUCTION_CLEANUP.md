@@ -45,4 +45,16 @@ Columns: **what · where · why it exists · action before prod.**
 | Hardcoded deadline fallback list | DeadlinesScreen.tsx (~lines 50-88) | shows demo data when /deadlines fails | Remove before prod or replace with empty state |
 | Hardcoded inbox fallback list | InboxScreen.tsx (~lines 112-139) | shows demo data when /events fails | Remove before prod or replace with empty state |
 
+## Dev-only mobile-testing changes (2026-06-26)
+
+Made to test the PWA on a physical phone over the LAN. All must revert/parametrize before prod.
+
+| What | Where | Why | Action before prod |
+|---|---|---|---|
+| LAN IPs in `ALLOWED_ORIGINS` | `backend/.env` (`http://192.168.10.9:5173`, `.15`) | let the phone's origin pass CORS | Lock to the real frontend origin |
+| Servers bound to `0.0.0.0` | run cmds (`uvicorn --host 0.0.0.0`, `vite --host`) | reachable from phone on LAN | Prod uses managed hosting / real domain |
+| `VITE_API_URL=http://192.168.10.9:8000` | frontend dev run env | phone hits API over LAN, not `localhost` | Set to real API URL via env |
+| Supabase **Site URL** = `http://192.168.10.9:5173` | Supabase dashboard → Auth → URL Config | OAuth redirect lands back on the phone origin | Revert to real domain; keep only prod redirect URLs |
+| Supabase redirect URLs for LAN IPs | Supabase dashboard | allow OAuth round-trip on LAN | Remove LAN entries before prod |
+
 _Add new rows here as work proceeds._
