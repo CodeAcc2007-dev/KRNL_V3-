@@ -293,16 +293,9 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 className="flex flex-col gap-3 items-start"
               >
                 {displayEvent.deadline && (
-                  <div
-                    className="inline-flex items-center gap-2.5 px-3 py-2"
-                    style={{
-                      background: "rgba(248,113,113,0.1)",
-                      border: "1px solid rgba(248,113,113,0.22)",
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Calendar size={15} color="var(--danger)" strokeWidth={2} className="flex-shrink-0" />
-                    <span style={{ color: "var(--danger)", fontSize: 13, fontWeight: 600, lineHeight: 1 }}>
+                  <div className="flex items-center gap-2.5">
+                    <Calendar size={16} color="var(--danger)" strokeWidth={1.9} className="flex-shrink-0" />
+                    <span style={{ color: "var(--danger)", fontSize: 13.5, fontWeight: 600, lineHeight: 1 }}>
                       {formatFullDate(displayEvent.deadline)}
                     </span>
                   </div>
@@ -310,7 +303,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 {displayEvent.venue && (
                   <div className="flex items-center gap-2.5">
                     <MapPin size={16} color="var(--text-3)" strokeWidth={1.8} className="flex-shrink-0" />
-                    <span style={{ color: "var(--text-2)", fontSize: 13.5 }}>{displayEvent.venue}</span>
+                    <span style={{ color: "var(--text-2)", fontSize: 13.5, lineHeight: 1 }}>{displayEvent.venue}</span>
                   </div>
                 )}
               </motion.div>
