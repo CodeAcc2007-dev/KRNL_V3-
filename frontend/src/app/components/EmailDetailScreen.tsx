@@ -33,12 +33,23 @@ function classifyLink(url: string): "whatsapp" | "form" | "doc" | "web" {
 }
 
 function LinkTypeIcon({ url }: { url: string }) {
-  const c = "var(--text-3)";
   switch (classifyLink(url)) {
-    case "whatsapp": return <WhatsAppIcon size={15} color={c} />;
-    case "form": return <ClipboardList size={15} color={c} strokeWidth={1.8} />;
-    case "doc": return <FileText size={15} color={c} strokeWidth={1.8} />;
-    default: return <Globe size={15} color={c} strokeWidth={1.8} />;
+    case "whatsapp": return <WhatsAppIcon size={16} color="#25d366" />;
+    case "form": return <ClipboardList size={15} color="#a78bfa" strokeWidth={1.9} />;
+    case "doc": return <FileText size={15} color="#60a5fa" strokeWidth={1.9} />;
+    default: return <Globe size={15} color="var(--accent)" strokeWidth={1.9} />;
+  }
+}
+
+/** Color-coding per category so the UI isn't monochrome. */
+function categoryStyle(cat?: string): { color: string; bg: string } {
+  switch ((cat || "").toLowerCase()) {
+    case "academic": return { color: "#60a5fa", bg: "rgba(59,130,246,0.14)" };
+    case "career": return { color: "#4ade80", bg: "rgba(34,197,94,0.14)" };
+    case "cultural": return { color: "#f472b6", bg: "rgba(236,72,153,0.14)" };
+    case "technical": return { color: "#22d3ee", bg: "rgba(6,182,212,0.14)" };
+    case "security": return { color: "#fbbf24", bg: "rgba(245,158,11,0.14)" };
+    default: return { color: "var(--text-2)", bg: "rgba(255,255,255,0.06)" };
   }
 }
 
@@ -252,16 +263,23 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
               <h1 style={{ color: "var(--text)", fontSize: 21, fontWeight: 700, lineHeight: 1.32, letterSpacing: "-0.01em" }}>
                 {displayEvent.display_name}
               </h1>
-              <div
-                className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-2"
-                style={{ color: "var(--text-3)", fontSize: 12 }}
-              >
-                <span>{formatFullDate(displayEvent.created_at)}</span>
+              <div className="flex items-center flex-wrap gap-2 mt-2.5">
+                <span style={{ color: "var(--text-3)", fontSize: 12 }}>
+                  {formatFullDate(displayEvent.created_at)}
+                </span>
                 {displayEvent.category && (
-                  <>
-                    <span style={{ opacity: 0.5 }}>·</span>
-                    <span>{displayEvent.category}</span>
-                  </>
+                  <span
+                    className="px-2 py-0.5"
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      borderRadius: 6,
+                      color: categoryStyle(displayEvent.category).color,
+                      background: categoryStyle(displayEvent.category).bg,
+                    }}
+                  >
+                    {displayEvent.category}
+                  </span>
                 )}
               </div>
             </motion.div>
@@ -272,18 +290,25 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
-                className="flex flex-col gap-3"
+                className="flex flex-col gap-3 items-start"
               >
                 {displayEvent.deadline && (
-                  <div className="flex items-center gap-3">
-                    <Calendar size={16} color="var(--danger)" strokeWidth={1.8} className="flex-shrink-0" />
-                    <span style={{ color: "var(--danger)", fontSize: 13.5, fontWeight: 600 }}>
+                  <div
+                    className="inline-flex items-center gap-2.5 px-3 py-2"
+                    style={{
+                      background: "rgba(248,113,113,0.1)",
+                      border: "1px solid rgba(248,113,113,0.22)",
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Calendar size={15} color="var(--danger)" strokeWidth={2} className="flex-shrink-0" />
+                    <span style={{ color: "var(--danger)", fontSize: 13, fontWeight: 600, lineHeight: 1 }}>
                       {formatFullDate(displayEvent.deadline)}
                     </span>
                   </div>
                 )}
                 {displayEvent.venue && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2.5">
                     <MapPin size={16} color="var(--text-3)" strokeWidth={1.8} className="flex-shrink-0" />
                     <span style={{ color: "var(--text-2)", fontSize: 13.5 }}>{displayEvent.venue}</span>
                   </div>
