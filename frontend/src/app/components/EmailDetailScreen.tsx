@@ -4,16 +4,43 @@ import {
   Calendar,
   MapPin,
   AlertCircle,
-  Tag,
   ExternalLink,
-  Clock,
   Loader2,
-  Link2,
-  Sparkles,
   ChevronRight,
+  Globe,
+  FileText,
+  ClipboardList,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { apiCall } from "../lib/api";
+
+/** Monotone WhatsApp glyph (lucide has no brand logos). */
+function WhatsAppIcon({ size = 15, color = "currentColor" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} className="flex-shrink-0">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.885-9.885 9.885M20.52 3.449C18.24 1.245 15.24 0 12.045 0 5.463 0 .104 5.359.101 11.892c0 2.096.546 4.142 1.588 5.945L0 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.892-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+/** Classify a link by URL so we can show a recognisable monotone icon + label. */
+function classifyLink(url: string): "whatsapp" | "form" | "doc" | "web" {
+  const u = url.toLowerCase();
+  if (u.includes("wa.me") || u.includes("whatsapp")) return "whatsapp";
+  if (u.includes("forms.gle") || u.includes("docs.google.com/forms") || u.includes("typeform") || u.includes("/forms/")) return "form";
+  if (u.includes("docs.google.com") || u.includes("drive.google.com")) return "doc";
+  return "web";
+}
+
+function LinkTypeIcon({ url }: { url: string }) {
+  const c = "var(--text-3)";
+  switch (classifyLink(url)) {
+    case "whatsapp": return <WhatsAppIcon size={15} color={c} />;
+    case "form": return <ClipboardList size={15} color={c} strokeWidth={1.8} />;
+    case "doc": return <FileText size={15} color={c} strokeWidth={1.8} />;
+    default: return <Globe size={15} color={c} strokeWidth={1.8} />;
+  }
+}
 
 interface EventDetail {
   id: number;
@@ -55,14 +82,6 @@ const priorityConfig = {
   High: { color: "var(--danger)", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)" },
   Med: { color: "#f59e0b", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.2)" },
   Low: { color: "var(--text-3)", bg: "rgba(138,143,152,0.08)", border: "rgba(138,143,152,0.15)" },
-};
-
-const urgencyConfig: Record<string, { label: string; color: string; bg: string }> = {
-  expired: { label: "Expired", color: "var(--text-3)", bg: "rgba(107,114,128,0.1)" },
-  today: { label: "Today", color: "var(--danger)", bg: "rgba(239,68,68,0.1)" },
-  tomorrow: { label: "Tomorrow", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  this_week: { label: "This Week", color: "var(--accent)", bg: "rgba(59,130,246,0.1)" },
-  upcoming: { label: "Upcoming", color: "var(--text-3)", bg: "rgba(138,143,152,0.08)" },
 };
 
 export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailScreenProps) {
@@ -138,23 +157,6 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
     }
   };
 
-  const formatRelativeTime = (dateStr?: string) => {
-    if (!dateStr) return "";
-    try {
-      const diffMs = Date.now() - new Date(dateStr).getTime();
-      const diffMins = Math.floor(diffMs / 60000);
-      if (diffMins < 1) return "Just now";
-      if (diffMins < 60) return `${diffMins}m ago`;
-      const diffHours = Math.floor(diffMins / 60);
-      if (diffHours < 24) return `${diffHours}h ago`;
-      const diffDays = Math.floor(diffHours / 24);
-      if (diffDays < 7) return `${diffDays}d ago`;
-      return `${Math.floor(diffDays / 7)}w ago`;
-    } catch {
-      return "";
-    }
-  };
-
   const getDomainFromUrl = (url: string) => {
     try {
       return new URL(url).hostname.replace("www.", "");
@@ -192,7 +194,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
     >
       {/* Header */}
       <div style={{ paddingTop: "var(--status-bar-pad)" }}>
-        <div className="flex items-center gap-3 px-4 pb-4">
+        <div className="flex items-center justify-between px-4 pb-4">
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => window.history.back()}
@@ -202,21 +204,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
             <ArrowLeft size={18} color="var(--text)" strokeWidth={1.8} />
           </motion.button>
 
-          <div className="flex-1 min-w-0">
-            <span
-              className="block truncate"
-              style={{ color: "var(--text)", fontSize: 15, fontWeight: 600 }}
-            >
-              {displayEvent?.display_name || "Loading..."}
-            </span>
-            {displayEvent?.created_at && (
-              <span style={{ color: "var(--text-3)", fontSize: 11 }}>
-                {formatRelativeTime(displayEvent.created_at)}
-              </span>
-            )}
-          </div>
-
-          {/* Priority badge in header */}
+          {/* Priority badge */}
           {displayEvent && (
             <div
               className="flex items-center gap-1.5 px-2.5 py-1"
@@ -255,172 +243,65 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
           </div>
         ) : displayEvent ? (
           <>
-            {/* ─── Sender Avatar Card ─── */}
+            {/* ─── Title ─── */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05, duration: 0.3 }}
-              className="flex items-center gap-3 p-4"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                borderRadius: 16,
-              }}
             >
+              <h1 style={{ color: "var(--text)", fontSize: 21, fontWeight: 700, lineHeight: 1.32, letterSpacing: "-0.01em" }}>
+                {displayEvent.display_name}
+              </h1>
               <div
-                className="flex items-center justify-center flex-shrink-0 rounded-full"
-                style={{
-                  width: 46,
-                  height: 46,
-                  background: "linear-gradient(135deg, var(--accent) 0%, var(--accent) 100%)",
-                  color: "white",
-                  fontSize: 18,
-                  fontWeight: 700,
-                  boxShadow: "0 4px 16px rgba(59,130,246,0.3)",
-                }}
+                className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-2"
+                style={{ color: "var(--text-3)", fontSize: 12 }}
               >
-                {displayEvent.display_name?.charAt(0).toUpperCase() || "E"}
-              </div>
-              <div className="flex-1 min-w-0">
-                <span
-                  className="block truncate"
-                  style={{ color: "var(--text)", fontSize: 15, fontWeight: 600 }}
-                >
-                  {displayEvent.display_name}
-                </span>
-                <span style={{ color: "var(--text-3)", fontSize: 11 }}>
-                  {formatFullDate(displayEvent.created_at)}
-                </span>
+                <span>{formatFullDate(displayEvent.created_at)}</span>
+                {displayEvent.category && (
+                  <>
+                    <span style={{ opacity: 0.5 }}>·</span>
+                    <span>{displayEvent.category}</span>
+                  </>
+                )}
               </div>
             </motion.div>
 
-            {/* ─── Metadata Chips Grid ─── */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.3 }}
-              className="grid grid-cols-2 gap-2"
-            >
-              {/* Deadline */}
-              {displayEvent.deadline && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2.5"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                  }}
-                >
-                  <Calendar size={14} color="var(--danger)" strokeWidth={1.8} />
-                  <div className="flex flex-col">
-                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Deadline
-                    </span>
-                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 500 }}>
-                      {formatFullDate(displayEvent.deadline).split(",").slice(0, 2).join(",")}
+            {/* ─── Key facts (deadline / venue) ─── */}
+            {(displayEvent.deadline || displayEvent.venue) && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="flex flex-col gap-3"
+              >
+                {displayEvent.deadline && (
+                  <div className="flex items-center gap-3">
+                    <Calendar size={16} color="var(--danger)" strokeWidth={1.8} className="flex-shrink-0" />
+                    <span style={{ color: "var(--danger)", fontSize: 13.5, fontWeight: 600 }}>
+                      {formatFullDate(displayEvent.deadline)}
                     </span>
                   </div>
-                </div>
-              )}
-
-              {/* Venue */}
-              {displayEvent.venue && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2.5"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                  }}
-                >
-                  <MapPin size={14} color="var(--accent)" strokeWidth={1.8} />
-                  <div className="flex flex-col">
-                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Venue
-                    </span>
-                    <span
-                      className="truncate"
-                      style={{ color: "var(--text)", fontSize: 12, fontWeight: 500, maxWidth: 120 }}
-                    >
-                      {displayEvent.venue}
-                    </span>
+                )}
+                {displayEvent.venue && (
+                  <div className="flex items-center gap-3">
+                    <MapPin size={16} color="var(--text-3)" strokeWidth={1.8} className="flex-shrink-0" />
+                    <span style={{ color: "var(--text-2)", fontSize: 13.5 }}>{displayEvent.venue}</span>
                   </div>
-                </div>
-              )}
+                )}
+              </motion.div>
+            )}
 
-              {/* Category */}
-              {displayEvent.category && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2.5"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                  }}
-                >
-                  <Tag size={14} color="var(--accent)" strokeWidth={1.8} />
-                  <div className="flex flex-col">
-                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Category
-                    </span>
-                    <span style={{ color: "var(--text)", fontSize: 12, fontWeight: 500 }}>
-                      {displayEvent.category}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Urgency */}
-              {displayEvent.urgency_label && displayEvent.urgency_label !== "upcoming" && (
-                <div
-                  className="flex items-center gap-2 px-3 py-2.5"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                  }}
-                >
-                  <Clock size={14} color={urgencyConfig[displayEvent.urgency_label]?.color || "var(--text-3)"} strokeWidth={1.8} />
-                  <div className="flex flex-col">
-                    <span style={{ color: "var(--text-3)", fontSize: 9, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      Urgency
-                    </span>
-                    <span
-                      style={{
-                        color: urgencyConfig[displayEvent.urgency_label]?.color || "var(--text)",
-                        fontSize: 12,
-                        fontWeight: 600,
-                      }}
-                    >
-                      {urgencyConfig[displayEvent.urgency_label]?.label || displayEvent.urgency_label}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-
-            {/* ─── Tags ─── */}
+            {/* ─── Tags (quiet) ─── */}
             {displayEvent.tags && displayEvent.tags.length > 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.15, duration: 0.3 }}
-                className="flex flex-wrap gap-1.5"
+                className="flex flex-wrap gap-x-3 gap-y-1"
               >
                 {displayEvent.tags.map((tag, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-1"
-                    style={{
-                      background: "rgba(59,130,246,0.1)",
-                      border: "1px solid rgba(59,130,246,0.2)",
-                      borderRadius: 8,
-                      color: "var(--accent)",
-                      fontSize: 11,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {tag}
+                  <span key={idx} style={{ color: "var(--text-3)", fontSize: 11.5 }}>
+                    #{tag}
                   </span>
                 ))}
               </motion.div>
@@ -556,7 +437,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                     href={link}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 px-3 py-2.5"
+                    className="flex items-center gap-3 px-3 py-2.5"
                     style={{
                       background: "var(--surface)",
                       border: "1px solid var(--border)",
@@ -564,14 +445,14 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                       textDecoration: "none",
                     }}
                   >
-                    <Link2 size={13} color="var(--accent)" strokeWidth={1.8} />
+                    <LinkTypeIcon url={link} />
                     <span
                       className="truncate flex-1"
-                      style={{ color: "var(--accent)", fontSize: 12, fontWeight: 500 }}
+                      style={{ color: "var(--text-2)", fontSize: 12.5, fontWeight: 500 }}
                     >
                       {getDomainFromUrl(link)}
                     </span>
-                    <ExternalLink size={11} color="var(--text-3)" strokeWidth={1.8} />
+                    <ExternalLink size={12} color="var(--text-3)" strokeWidth={1.8} />
                   </a>
                 ))}
               </motion.div>
