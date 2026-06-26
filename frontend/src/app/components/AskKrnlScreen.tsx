@@ -149,7 +149,7 @@ export function AskKrnlScreen({ onOpenEventDetail }: AskKrnlScreenProps = {}) {
   return (
     <div className="flex flex-col h-full relative" style={{ background: "#08090a" }}>
       {/* Header */}
-      <div style={{ paddingTop: 48 }} className="flex-shrink-0">
+      <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         <div className="px-4 pb-3 flex items-center justify-between">
           <div>
             <span

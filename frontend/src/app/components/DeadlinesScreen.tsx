@@ -272,7 +272,7 @@ export function DeadlinesScreen() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
-      <div style={{ paddingTop: 48 }} className="flex-shrink-0">
+      <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         {/* Header */}
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between mb-0.5">

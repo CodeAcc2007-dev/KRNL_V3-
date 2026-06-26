@@ -127,16 +127,21 @@ export default function App() {
 
   return (
     <div
-      className="flex items-center justify-center min-h-screen w-full"
-      style={{ background: "#050507" }}
+      className="flex items-center justify-center w-full"
+      style={{
+        background: "#050507",
+        height: isMobileOrStandalone ? "100dvh" : undefined,
+        minHeight: isMobileOrStandalone ? undefined : "100vh",
+        overflow: isMobileOrStandalone ? "hidden" : undefined,
+      }}
     >{/* MARKER-MAKE-KIT-INVOKED */}
       {/* Mobile frame wrapper */}
       <div
         className="relative overflow-hidden"
         style={{
           width: isMobileOrStandalone ? "100%" : 390,
-          height: isMobileOrStandalone ? "100%" : 844,
-          maxHeight: isMobileOrStandalone ? "100vh" : 844,
+          height: isMobileOrStandalone ? "100dvh" : 844,
+          maxHeight: isMobileOrStandalone ? "100dvh" : 844,
           maxWidth: isMobileOrStandalone ? "100vw" : 390,
           background: "#08090a",
           borderRadius: isMobileOrStandalone ? 0 : 44,

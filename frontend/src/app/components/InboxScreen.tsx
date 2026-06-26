@@ -35,9 +35,10 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   const [inboxTabs, setInboxTabs] = useState<string[]>([
     "All",
     "Important",
-    "Opportunities",
-    "Announcement",
     "Academic",
+    "Opportunities",
+    "Cultural",
+    "Announcements",
   ]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [events, setEvents] = useState<EventItem[]>([]);
@@ -185,6 +186,14 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   };
 
   // FUTURE_PROOF_HOOK: Custom Tab Configuration
+  // Map each tab to the backend categories it groups.
+  const tabCategories: Record<string, string[]> = {
+    academic: ["academic"],
+    opportunities: ["career", "technical"],
+    cultural: ["cultural"],
+    announcements: ["general", "security"],
+  };
+
   const filteredEvents = events.filter((ev) => {
     const tabLower = activeFilter.toLowerCase();
     if (tabLower === "all") {
@@ -192,13 +201,10 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
     }
     if (tabLower === "important") {
       // Show high importance or high priority items
-      return (
-        (ev.personalized_priority && ev.personalized_priority >= 70) ||
-        (ev.category && ev.category.toLowerCase() === "important")
-      );
+      return ev.personalized_priority && ev.personalized_priority >= 70;
     }
-    // Filter match by category name
-    return ev.category && ev.category.toLowerCase() === tabLower;
+    const cats = tabCategories[tabLower] || [tabLower];
+    return ev.category && cats.includes(ev.category.toLowerCase());
   });
 
   // Sort by latest email first (email_date, falling back to ingest time).
@@ -211,7 +217,7 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
   return (
     <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
       {/* Safe area top */}
-      <div style={{ paddingTop: 48 }}>
+      <div style={{ paddingTop: "var(--status-bar-pad)" }}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 pb-4">
           <motion.button

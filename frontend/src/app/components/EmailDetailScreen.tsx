@@ -180,7 +180,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
       style={{ background: "#08090a" }}
     >
       {/* Header */}
-      <div style={{ paddingTop: 48 }}>
+      <div style={{ paddingTop: "var(--status-bar-pad)" }}>
         <div className="flex items-center gap-3 px-4 pb-4">
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -226,7 +226,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
 
       {/* Scrollable content */}
       <div
-        className="flex-1 overflow-y-auto px-4 flex flex-col gap-4"
+        className="flex-1 min-h-0 overflow-y-auto px-4 flex flex-col gap-4"
         style={{ scrollbarWidth: "none", paddingBottom: 110 }}
       >
         {/* Error toast */}
@@ -466,6 +466,7 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                   border: "1px solid #2d2d34",
                   borderRadius: 16,
                   overflow: "hidden",
+                  flexShrink: 0,
                 }}
               >
                 <button
@@ -517,34 +518,6 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
                   )}
                 </AnimatePresence>
               </motion.div>
-            )}
-
-            {/* ─── Registration CTA ─── */}
-            {displayEvent.has_registration && displayEvent.registration_link && (
-              <motion.a
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.3 }}
-                href={displayEvent.registration_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-4 py-3.5"
-                style={{
-                  background: "linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)",
-                  borderRadius: 14,
-                  textDecoration: "none",
-                  boxShadow: "0 4px 20px rgba(99,102,241,0.3)",
-                }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <ExternalLink size={16} color="white" strokeWidth={1.8} />
-                  <span style={{ color: "white", fontSize: 14, fontWeight: 600 }}>
-                    Register Now
-                  </span>
-                </div>
-                <ChevronRight size={16} color="rgba(255,255,255,0.7)" strokeWidth={2} />
-              </motion.a>
             )}
 
             {/* ─── Extracted Links ─── */}

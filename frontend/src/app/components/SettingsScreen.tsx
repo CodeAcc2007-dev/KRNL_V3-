@@ -274,7 +274,7 @@ export function SettingsScreen() {
 
   return (
     <div className="flex flex-col h-full" style={{ background: "#08090a" }}>
-      <div style={{ paddingTop: 48 }} className="flex-shrink-0">
+      <div style={{ paddingTop: "var(--status-bar-pad)" }} className="flex-shrink-0">
         {/* Header */}
         <div className="px-4 pb-4">
           <span style={{ color: "#f7f8f8", fontSize: 20, fontWeight: 700, display: "block" }}>

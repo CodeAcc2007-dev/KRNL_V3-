@@ -1,3 +1,21 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+html, body, #root {
+  margin: 0;
+}
+
+/* Reserved space for the mock status bar (desktop frame only). */
+:root { --status-bar-pad: 48px; }
+
+/* On mobile: lock the page so only inner content scrolls, and collapse the
+   status-bar spacer to the device safe-area (0 in a browser tab, notch in PWA). */
+@media (max-width: 500px) {
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  :root { --status-bar-pad: calc(env(safe-area-inset-top, 0px) + 16px); }
+}
