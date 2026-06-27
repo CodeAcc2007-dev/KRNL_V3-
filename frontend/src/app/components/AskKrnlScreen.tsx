@@ -30,7 +30,7 @@ const suggestions = [
 
 function renderAIText(text: string) {
   return text.split("\n").map((line, i) => {
-    const parts = line.split(/(\*\*[^*]+\*\*|¹|²|³|⁴|⁵)/g);
+    const parts = line.split(/(\*\*[^*]+\*\*|[¹²³⁰⁴-⁹]+)/g);
     return (
       <p key={i} style={{ margin: "2px 0", fontSize: 14, lineHeight: 1.6 }}>
         {parts.map((part, j) => {
@@ -41,8 +41,14 @@ function renderAIText(text: string) {
               </strong>
             );
           }
-          if (["¹", "²", "³", "⁴", "⁵"].includes(part)) {
-            const num = part === "¹" ? 1 : part === "²" ? 2 : part === "³" ? 3 : part === "⁴" ? 4 : 5;
+          const superMap: Record<string, string> = {
+            "⁰": "0", "¹": "1", "²": "2", "³": "3",
+            "⁴": "4", "⁵": "5", "⁶": "6", "⁷": "7",
+            "⁸": "8", "⁹": "9",
+          };
+          const isSuper = part.length > 0 && [...part].every((ch) => ch in superMap);
+          if (isSuper) {
+            const num = parseInt([...part].map((ch) => superMap[ch]).join(""), 10);
             return (
               <sup
                 key={j}
