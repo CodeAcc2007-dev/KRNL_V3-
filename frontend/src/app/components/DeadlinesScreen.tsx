@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock, ChevronRight, CheckCircle2, Loader2, ChevronLeft, Calendar as CalendarIcon } from "lucide-react";
+import { Clock, ChevronRight, CheckCircle2, Circle, Loader2, ChevronLeft, Calendar as CalendarIcon } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { apiCall } from "../lib/api";
 import { EmailDetailScreen } from "./EmailDetailScreen";
@@ -19,11 +19,9 @@ interface EventItem {
   deadline_history?: Array<{ old?: string; new?: string }>;
 }
 
-const filters = ["Overdue", "This Week", "Later"];
 const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function DeadlinesScreen() {
-  const [activeFilter, setActiveFilter] = useState("This Week");
   const [checked, setChecked] = useState<number[]>([]);
   const [deadlines, setDeadlines] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,95 +105,45 @@ export function DeadlinesScreen() {
     );
   };
 
-  const getCardStyle = (urgency: string, isDone: boolean) => {
-    if (isDone) {
-      return {
-        bgAccent: "rgba(16,185,129,0.05)",
-        borderColor: "rgba(16,185,129,0.25)",
-        badgeBg: "rgba(16,185,129,0.12)",
-        badgeColor: "#10b981",
-        dotColor: "#10b981",
-      };
-    }
-    const urg = urgency.toLowerCase();
-    if (urg === "today" || urg === "expired") {
-      return {
-        bgAccent: "rgba(239,68,68,0.06)",
-        borderColor: "rgba(239,68,68,0.35)",
-        badgeBg: "rgba(239,68,68,0.15)",
-        badgeColor: "var(--danger)",
-        dotColor: "var(--danger)",
-      };
-    } else if (urg === "tomorrow") {
-      return {
-        bgAccent: "rgba(245,158,11,0.06)",
-        borderColor: "rgba(245,158,11,0.35)",
-        badgeBg: "rgba(245,158,11,0.15)",
-        badgeColor: "#fbbf24",
-        dotColor: "#f59e0b",
-      };
-    } else if (urg === "this_week") {
-      return {
-        bgAccent: "rgba(59,130,246,0.06)",
-        borderColor: "rgba(59,130,246,0.35)",
-        badgeBg: "rgba(59,130,246,0.15)",
-        badgeColor: "var(--accent)",
-        dotColor: "var(--accent)",
-      };
-    } else {
-      return {
-        bgAccent: "transparent",
-        borderColor: "var(--border)",
-        badgeBg: "rgba(141,145,152,0.12)",
-        badgeColor: "var(--text-3)",
-        dotColor: "var(--text-3)",
-      };
+
+  const categoryColor = (cat?: string) => {
+    switch ((cat || "").toLowerCase()) {
+      case "academic": return "#60a5fa";
+      case "career": return "#4ade80";
+      case "cultural": return "#f472b6";
+      case "technical": return "#22d3ee";
+      case "security": return "#fbbf24";
+      default: return "var(--text-3)";
     }
   };
 
-  const formatDueText = (deadlineStr: string, urgency: string) => {
+  const shortDue = (item: EventItem) => {
     try {
-      const date = new Date(deadlineStr);
-      // Deadlines stored as date-only land on midnight UTC; hide the
-      // misleading time in that case and only show it for real times.
+      const date = new Date(item.deadline);
       const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
-      const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const urg = urgency.toLowerCase();
-      if (urg === "today") {
-        return isMidnight ? "Due Today" : `Due Today, ${timeStr}`;
-      }
-      if (urg === "tomorrow") {
-        return isMidnight ? "Due Tomorrow" : `Due Tomorrow, ${timeStr}`;
-      }
-      const dateStr = date.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      return isMidnight ? `Due ${dateStr}` : `Due ${dateStr} at ${timeStr}`;
+      const u = item.urgency_label?.toLowerCase();
+      if (u === "today") return isMidnight ? "Today" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      if (u === "tomorrow") return "Tomorrow";
+      return date.toLocaleDateString([], { month: "short", day: "numeric" });
     } catch {
-      return `Due ${deadlineStr}`;
+      return "";
     }
   };
 
-  const urgencyLabel = (u?: string) => {
-    switch ((u || "").toLowerCase()) {
-      case "today": return "Today";
-      case "tomorrow": return "Tomorrow";
-      case "this_week": return "This Week";
-      case "expired": return "Overdue";
-      case "upcoming": return "Upcoming";
-      default: return u || "";
-    }
-  };
-
-  // List View Filter mapping
-  const filteredListDeadlines = deadlines.filter((item) => {
-    const urg = item.urgency_label?.toLowerCase() || "upcoming";
-    if (activeFilter === "Overdue") {
-      return urg === "expired";
-    }
-    if (activeFilter === "This Week") {
-      return urg === "today" || urg === "tomorrow" || urg === "this_week";
-    }
-    return urg === "upcoming";
-  });
+  // Group deadlines into ordered urgency sections (replaces the filter tabs).
+  const urgencyGroups = [
+    { key: "expired", label: "Overdue", color: "var(--danger)" },
+    { key: "today", label: "Today", color: "var(--danger)" },
+    { key: "tomorrow", label: "Tomorrow", color: "#fbbf24" },
+    { key: "this_week", label: "This Week", color: "var(--accent)" },
+    { key: "upcoming", label: "Later", color: "var(--text-3)" },
+  ];
+  const groupedDeadlines = urgencyGroups
+    .map((g) => ({
+      ...g,
+      items: deadlines.filter((d) => (d.urgency_label?.toLowerCase() || "upcoming") === g.key),
+    }))
+    .filter((g) => g.items.length > 0);
 
   const dueThisWeekCount = deadlines.filter((item) => {
     const urg = item.urgency_label?.toLowerCase() || "upcoming";
@@ -332,32 +280,6 @@ export function DeadlinesScreen() {
             )}
           </div>
         </div>
-
-        {/* List Filters (only shown in list view) */}
-        {activeView === "list" && (
-          <div className="flex gap-2 px-4 pb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-            {filters.map((f) => {
-              const active = f === activeFilter;
-              return (
-                <motion.button
-                  key={f}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveFilter(f)}
-                  className="whitespace-nowrap px-3.5 py-1.5 flex-shrink-0"
-                  style={{
-                    borderRadius: 999,
-                    background: active ? "var(--accent-weak)" : "transparent",
-                    color: active ? "var(--accent)" : "var(--text-3)",
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 500,
-                  }}
-                >
-                  {f}
-                </motion.button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {error && (
@@ -374,137 +296,93 @@ export function DeadlinesScreen() {
             <span className="text-xs">Fetching deadline logs...</span>
           </div>
         ) : activeView === "list" ? (
-          /* TIMELINE LIST VIEW */
-          <div className="relative">
-            {filteredListDeadlines.length > 0 && (
-              <div
-                className="absolute left-[19px] top-4 bottom-4 w-px"
-                style={{ background: "linear-gradient(to bottom, var(--border), transparent)" }}
-              />
-            )}
-
-            <div className="flex flex-col gap-3">
-              {filteredListDeadlines.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-[var(--text-3)] gap-1">
-                  <span className="text-sm font-semibold">Clean Slate!</span>
-                  <span className="text-xs opacity-0.7">No deadlines in this range.</span>
-                </div>
-              ) : (
-                filteredListDeadlines.map((item, i) => {
-                  const isDone = checked.includes(item.id);
-                  const style = getCardStyle(item.urgency_label || "upcoming", isDone);
-                  return (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: Math.min(i * 0.05, 0.4), duration: 0.3 }}
-                      className="flex gap-3 items-start"
+          /* CHECKLIST GROUPED VIEW */
+          <div className="flex flex-col gap-5 pt-1">
+            {groupedDeadlines.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-[var(--text-3)] gap-1">
+                <span className="text-sm font-semibold">Clean slate</span>
+                <span className="text-xs opacity-70">No deadlines right now.</span>
+              </div>
+            ) : (
+              groupedDeadlines.map((group) => (
+                <div key={group.key}>
+                  <div className="flex items-center gap-2 mb-1 px-1">
+                    <span
+                      style={{
+                        color: group.color,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                      }}
                     >
-                      {/* Timeline dot */}
-                      <div className="flex flex-col items-center flex-shrink-0 pt-3.5">
+                      {group.label}
+                    </span>
+                    <span style={{ color: "var(--text-3)", fontSize: 11 }}>{group.items.length}</span>
+                  </div>
+                  <div className="flex flex-col divide-y" style={{ borderColor: "var(--border)" }}>
+                    {group.items.map((item) => {
+                      const isDone = checked.includes(item.id);
+                      return (
                         <div
-                          className="w-2.5 h-2.5 rounded-full z-10"
-                          style={{ background: style.dotColor }}
-                        />
-                      </div>
-
-                      {/* Card */}
-                      <div
-                        onClick={() => setSelectedEventId(item.id)}
-                        className="flex-1 flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer"
-                        style={{
-                          background: style.bgAccent || "var(--surface)",
-                          border: `1px solid ${style.borderColor}`,
-                          borderRadius: 16,
-                          opacity: isDone ? 0.7 : 1,
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-2 mb-1">
-                            <span
-                              style={{
-                                color: isDone ? "var(--text-3)" : "var(--text)",
-                                fontSize: 14,
-                                fontWeight: 600,
-                                lineHeight: 1.3,
-                                textDecoration: isDone ? "line-through" : "none",
-                              }}
-                              className="line-clamp-2 flex-1 min-w-0"
-                            >
-                              {item.display_name}
-                            </span>
-                            {item.deadline_history && item.deadline_history.length > 0 && (
+                          key={item.id}
+                          onClick={() => setSelectedEventId(item.id)}
+                          className="flex items-center gap-3 py-3 cursor-pointer"
+                        >
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
+                            className="flex-shrink-0 active:scale-90 transition-transform"
+                          >
+                            {isDone ? (
+                              <CheckCircle2 size={21} color="#22c55e" strokeWidth={2} />
+                            ) : (
+                              <Circle size={21} color="var(--text-3)" strokeWidth={1.6} />
+                            )}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
                               <span
+                                className="line-clamp-1 flex-1 min-w-0"
                                 style={{
-                                  marginLeft: 6,
-                                  fontSize: 10,
-                                  color: "#fbbf24",
-                                  background: "rgba(245,158,11,0.15)",
-                                  borderRadius: 4,
-                                  padding: "1px 6px",
+                                  color: isDone ? "var(--text-3)" : "var(--text)",
+                                  fontSize: 14,
+                                  fontWeight: 500,
+                                  textDecoration: isDone ? "line-through" : "none",
                                 }}
                               >
-                                Deadline extended
+                                {item.display_name}
                               </span>
-                            )}
-                            <span
-                              className="px-2 py-0.5 flex-shrink-0"
-                              style={{
-                                background: style.badgeBg,
-                                color: style.badgeColor,
-                                fontSize: 10,
-                                fontWeight: 700,
-                                borderRadius: 8,
-                              }}
-                            >
-                              {isDone ? "Done" : urgencyLabel(item.urgency_label)}
-                            </span>
+                              <span style={{ color: group.color, fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>
+                                {isDone ? "Done" : shortDue(item)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              {item.category && (
+                                <>
+                                  <span
+                                    style={{
+                                      width: 6,
+                                      height: 6,
+                                      borderRadius: "50%",
+                                      background: categoryColor(item.category),
+                                      flexShrink: 0,
+                                    }}
+                                  />
+                                  <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{item.category}</span>
+                                </>
+                              )}
+                              {item.deadline_history && item.deadline_history.length > 0 && (
+                                <span style={{ color: "#fbbf24", fontSize: 10.5 }}>· extended</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <Clock size={10} color="var(--text-3)" strokeWidth={2} />
-                            <span style={{ color: "var(--text-3)", fontSize: 12 }}>
-                              {isDone ? "Completed" : formatDueText(item.deadline, item.urgency_label || "upcoming")}
-                            </span>
-                          </div>
-                          {item.category && (
-                            <span
-                              className="mt-1.5 inline-block px-2 py-0.5"
-                              style={{
-                                background: "var(--border)",
-                                color: "var(--text-3)",
-                                fontSize: 10,
-                                borderRadius: 6,
-                              }}
-                            >
-                              {item.category}
-                            </span>
-                          )}
                         </div>
-
-                        <div className="flex items-center gap-2 ml-3">
-                          <motion.button
-                            whileTap={{ scale: 0.88 }}
-                            onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
-                            className="flex items-center justify-center w-7 h-7 rounded-full"
-                            style={{
-                              background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
-                              border: `1.5px solid ${isDone ? "#10b981" : "var(--border)"}`,
-                            }}
-                          >
-                            <CheckCircle2
-                              size={14}
-                              color={isDone ? "#10b981" : "var(--text-3)"}
-                              strokeWidth={2}
-                            />
-                          </motion.button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         ) : (
           /* MONTHLY GRID CALENDAR VIEW */
@@ -585,69 +463,57 @@ export function DeadlinesScreen() {
               </span>
             </div>
 
-            {/* List of cards due on selected date */}
-            <div className="flex flex-col gap-2">
+            {/* List of deadlines due on selected date */}
+            <div className="flex flex-col divide-y" style={{ borderColor: "var(--border)" }}>
               {selectedDateDeadlines.length === 0 ? (
-                <div className="py-8 text-center bg-[var(--surface)]/40 border border-dashed border-[var(--border)] rounded-2xl">
+                <div className="py-8 text-center">
                   <span style={{ color: "var(--text-3)", fontSize: 12 }}>No deadlines due on this day.</span>
                 </div>
               ) : (
                 selectedDateDeadlines.map((item) => {
                   const isDone = checked.includes(item.id);
-                  const style = getCardStyle(item.urgency_label || "upcoming", isDone);
                   return (
                     <div
                       key={item.id}
                       onClick={() => setSelectedEventId(item.id)}
-                      className="flex items-center justify-between gap-3 px-4 py-3 bg-[var(--surface)] border rounded-2xl cursor-pointer"
-                      style={{
-                        borderColor: style.borderColor,
-                        opacity: isDone ? 0.7 : 1,
-                      }}
+                      className="flex items-center gap-3 py-2.5 cursor-pointer"
                     >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span
-                            style={{
-                              color: isDone ? "var(--text-3)" : "var(--text)",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              textDecoration: isDone ? "line-through" : "none",
-                            }}
-                            className="line-clamp-2 flex-1 min-w-0"
-                          >
-                            {item.display_name}
-                          </span>
-                          <span
-                            className="px-1.5 py-0.5 text-[9px] font-bold rounded"
-                            style={{
-                              background: style.badgeBg,
-                              color: style.badgeColor,
-                            }}
-                          >
-                            {isDone ? "Done" : item.urgency_label}
-                          </span>
-                        </div>
-                        <span style={{ color: "var(--text-3)", fontSize: 11 }}>
-                          {isDone ? "Completed" : formatDueText(item.deadline, item.urgency_label || "upcoming")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <motion.button
-                          whileTap={{ scale: 0.88 }}
-                          onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
-                          className="flex items-center justify-center w-6.5 h-6.5 rounded-full"
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
+                        className="flex-shrink-0 active:scale-90 transition-transform"
+                      >
+                        {isDone ? (
+                          <CheckCircle2 size={20} color="#22c55e" strokeWidth={2} />
+                        ) : (
+                          <Circle size={20} color="var(--text-3)" strokeWidth={1.6} />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <span
+                          className="line-clamp-1"
                           style={{
-                            background: isDone ? "rgba(16,185,129,0.15)" : "rgba(45,45,52,0.8)",
-                            border: `1.5px solid ${isDone ? "#10b981" : "var(--border)"}`,
+                            color: isDone ? "var(--text-3)" : "var(--text)",
+                            fontSize: 13.5,
+                            fontWeight: 500,
+                            textDecoration: isDone ? "line-through" : "none",
                           }}
                         >
-                          <CheckCircle2
-                            size={12}
-                            color={isDone ? "#10b981" : "var(--text-3)"}
-                            strokeWidth={2}
-                          />
-                        </motion.button>
+                          {item.display_name}
+                        </span>
+                        {item.category && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span
+                              style={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: "50%",
+                                background: categoryColor(item.category),
+                                flexShrink: 0,
+                              }}
+                            />
+                            <span style={{ color: "var(--text-3)", fontSize: 11 }}>{item.category}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
