@@ -1,12 +1,15 @@
-import re
 import logging
-from typing import List, Optional
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from google.genai import types
 from app.core.security import get_current_user
-from app.services.retrieval import hybrid_retrieval
+from app.services.retrieval import hybrid_retrieval, get_upcoming_agenda
 from app.services.semantic_cache import get_semantic_cache, set_semantic_cache
+from app.services.answer_context import (
+    SYSTEM_PROMPT, build_source_set, render_context, map_citations,
+)
+from app.utils.dates import today_anchor
 from app.services.ingestion import genai_client
 
 logger = logging.getLogger("uvicorn.error")
@@ -49,76 +52,42 @@ def query_ai_assistant(request: QueryRequest, current_user: dict = Depends(get_c
             citations=citations_mapped
         )
 
-    # 2. Cache Miss: Perform Hybrid Retrieval
-    documents = hybrid_retrieval(query_text, user_id, limit=5)
+    # 2. Cache miss: gather the upcoming agenda (recall) + retrieval detail.
+    agenda = get_upcoming_agenda(user_id)
+    rag_docs = hybrid_retrieval(query_text, user_id, limit=5)
 
-    if not documents:
-        # Return fallback response if no context is found
+    sources = build_source_set(agenda, rag_docs)
+    if not sources:
         return QueryResponse(
             answer="I couldn't find any relevant emails or events in your KRNL inbox to answer this query.",
-            citations=[]
+            citations=[],
         )
 
-    # 3. Build context string and prompt
-    context_parts = []
-    for idx, doc in enumerate(documents, start=1):
-        context_parts.append(
-            f"Document [{idx}]:\n"
-            f"Source Event: {doc['display_name']} (ID: {doc['event_id']})\n"
-            f"Text:\n{doc['text']}"
-        )
-    context_str = "\n\n".join(context_parts)
+    context_str = render_context(sources, today_anchor())
+    user_prompt = f"{context_str}\n\nUser question: {query_text}"
 
-    system_prompt = (
-        "You are KRNL's AI Assistant. Answer the user's query ONLY using the provided email context documents.\n"
-        "If you cannot find the answer, state that you do not know. Never hallucinate links.\n"
-        "Cite the context documents using their index numbers (e.g. [1], [2]) at the end of statements where you use them."
-    )
-
-    user_prompt = f"Context Documents:\n{context_str}\n\nUser Query: {query_text}"
-
-    # 4. Generate answer
+    # 3. Generate the answer.
     try:
         response = genai_client.models.generate_content(
             model="gemini-3.1-flash-lite",
             contents=user_prompt,
             config=types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.2
-            )
+                system_instruction=SYSTEM_PROMPT,
+                temperature=0.2,
+            ),
         )
         answer_text = response.text or ""
     except Exception as e:
-        logger.error(f"Gemini generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"AI Assistant service failed: {str(e)}")
+        logger.error(f"Assistant generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Assistant service failed: {str(e)}")
 
-    # 5. Extract citations and convert bracketed indices to superscripts (for frontend compatibility)
-    superscripts = {1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵"}
-    citations = []
+    # 4. Map citations over the unified source set.
+    answer_text, citations = map_citations(answer_text, sources)
 
-    for idx, doc in enumerate(documents, start=1):
-        bracket_str = f"[{idx}]"
-        super_str = superscripts.get(idx, f"[{idx}]")
-
-        # Check if the generated text references this document
-        if bracket_str in answer_text or super_str in answer_text:
-            # Standardize brackets to superscripts for the PWA renderer
-            answer_text = answer_text.replace(bracket_str, super_str)
-            try:
-                event_id_val = int(doc["event_id"])
-            except ValueError:
-                event_id_val = 0
-
-            citations.append({
-                "id": idx,
-                "label": doc["display_name"],
-                "event_id": event_id_val
-            })
-
-    # 6. Save back to Semantic Cache
+    # 5. Save back to the cache.
     set_semantic_cache(user_id, query_text, answer_text, citations)
 
     return QueryResponse(
         answer=answer_text,
-        citations=[Citation(**c) for c in citations]
+        citations=[Citation(**c) for c in citations],
     )
