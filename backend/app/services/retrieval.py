@@ -1,8 +1,10 @@
 import logging
 import concurrent.futures
+from datetime import date, timedelta
 from qdrant_client.http import models as qdrant_models
 from app.services.ingestion import generate_embeddings, qdrant_client
 from app.core.security import supabase
+from app.utils.dates import ist_today, parse_deadline_date
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -130,3 +132,44 @@ def hybrid_retrieval(query: str, user_id: str, limit: int = 5) -> list[dict]:
         })
 
     return final_results
+
+
+def _select_upcoming(rows: list[dict], today: date, grace_days: int = 1) -> list[dict]:
+    """Filter deadline rows to upcoming (>= today - grace_days), sorted ascending."""
+    cutoff = today - timedelta(days=grace_days)
+    kept = []
+    for row in rows:
+        deadline_str = row.get("deadline")
+        d = parse_deadline_date(deadline_str)
+        if d is None or d < cutoff:
+            continue
+        kept.append((deadline_str, row))
+    kept.sort(key=lambda pair: pair[0] or "")
+    return [
+        {
+            "event_id": str(row.get("id")),
+            "display_name": row.get("display_name") or "Unknown Event",
+            "deadline": row.get("deadline"),
+            "venue": row.get("venue"),
+            "category": row.get("category") or "General",
+        }
+        for _, row in kept
+    ]
+
+
+def get_upcoming_agenda(user_id: str, grace_days: int = 1, limit: int = 25) -> list[dict]:
+    """Pull deadline-bearing events for the user (same source as the task view)
+    and return the soonest `limit` upcoming agenda items."""
+    try:
+        res = (
+            supabase.table("events")
+            .select("*")
+            .eq("user_id", user_id)
+            .not_.is_("deadline", "null")
+            .execute()
+        )
+        rows = res.data or []
+    except Exception as e:
+        logger.error(f"Failed to fetch agenda in get_upcoming_agenda: {e}")
+        return []
+    return _select_upcoming(rows, ist_today(), grace_days=grace_days)[:limit]
