@@ -15,7 +15,7 @@ from app.services.ingestion import (
     qdrant_client
 )
 from app.utils.dedup import get_message_id
-from app.services.event_merge import find_matching_event, should_apply_extension, apply_extension
+from app.services.event_merge import find_matching_event, apply_update
 from qdrant_client.http import models as qdrant_models
 
 logger = logging.getLogger("uvicorn.error")
@@ -109,24 +109,25 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 # 4a. Run extract_event_intelligence
                 extracted = extract_event_intelligence(subject, body, msg_date)
 
-                # Deadline-extension merge: if this email updates an event we already
-                # have, move that event's deadline forward and show this email in the
-                # inbox without its own deadline (so it doesn't double-list in Deadlines).
+                # Update merge: if this email updates an event we already have
+                # (reminder, deadline change, venue change, …), merge it into that
+                # event and prefer the new timing/date instead of creating a
+                # duplicate. The email is still stored for the inbox, but without
+                # its own deadline so it doesn't double-list in Deadlines.
                 matched_event = None
-                if extracted.get("is_update") and extracted.get("update_type") == "deadline_extension" \
-                        and extracted.get("deadline"):
+                if extracted.get("is_update"):
                     try:
                         matched_event = find_matching_event(user_id, clean_email_body(body), supabase_service)
                     except Exception as e:
-                        logger.error(f"Deadline-extension matching failed: {e}")
-                    if matched_event and should_apply_extension(matched_event.get("deadline"), extracted.get("deadline")):
+                        logger.error(f"Update matching failed: {e}")
+                    if matched_event:
                         try:
-                            apply_extension(matched_event, extracted.get("deadline"),
-                                            extracted.get("update_type"), message_id, supabase_service)
-                            logger.info(f"Applied deadline extension to event {matched_event['id']} "
-                                        f"({matched_event.get('deadline')} -> {extracted.get('deadline')})")
+                            apply_update(matched_event, extracted.get("deadline"),
+                                         extracted.get("update_type"), message_id, supabase_service)
+                            logger.info(f"Merged update ({extracted.get('update_type')}) into "
+                                        f"event {matched_event['id']}")
                         except Exception as e:
-                            logger.error(f"Failed to apply deadline extension: {e}")
+                            logger.error(f"Failed to apply update: {e}")
 
                 # 4b. Format and save event to Supabase 'events'
                 links = extracted.get("links") or []

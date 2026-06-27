@@ -35,87 +35,77 @@ export function LoginScreen({ oauthError }: { oauthError?: string | null }) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-full px-6 relative" style={{ background: "var(--bg)" }}>
-      {/* Background ambient glow effect */}
-      <div 
-        className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full filter blur-[80px] opacity-15 pointer-events-none"
-        style={{
-          background: "radial-gradient(circle, #22c55e 0%, rgba(34,197,94,0) 70%)"
-        }}
-      />
-
-      <div className="w-full max-w-sm flex flex-col items-center text-center z-10">
-        {/* Stylized KRNL Logo Icon */}
+    <div className="flex flex-col items-center justify-center h-full px-6" style={{ background: "var(--bg)" }}>
+      <div className="w-full max-w-sm flex flex-col items-center text-center">
+        {/* KRNL logo mark */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative flex items-center justify-center w-20 h-20 rounded-[24px] mb-8 border border-green-500/20 shadow-[0_0_30px_rgba(34,197,94,0.15)] bg-gradient-to-br from-[#0c0d0e] to-[var(--bg)]"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="flex items-center justify-center mb-8"
+          style={{ width: 72, height: 72, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 18 }}
         >
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="1.5">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          {/* Internal core dot */}
-          <div className="absolute w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </motion.div>
 
         {/* Title */}
         <motion.h1
-          initial={{ y: 15, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.5 }}
-          className="text-white text-3xl font-bold tracking-tight uppercase"
+          transition={{ delay: 0.1, duration: 0.45 }}
+          style={{ color: "var(--text)", fontSize: 30, fontWeight: 700, letterSpacing: "0.04em" }}
         >
           KRNL
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
-          initial={{ y: 15, opacity: 0 }}
+          initial={{ y: 12, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          className="text-neutral-400 text-sm mt-3 px-4 leading-relaxed font-medium"
+          transition={{ delay: 0.2, duration: 0.45 }}
+          style={{ color: "var(--text-3)", fontSize: 14, marginTop: 10, lineHeight: 1.5 }}
         >
-          Your unified campus email & deadline portal.
+          Your unified campus email &amp; deadline portal.
         </motion.p>
 
-        {/* Action Button Card */}
+        {/* Action area */}
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 16, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="w-full mt-10 px-6 py-8 rounded-[28px] border border-white/5 bg-[#0e0f11]/60 backdrop-blur-xl"
+          transition={{ delay: 0.3, duration: 0.45 }}
+          className="w-full mt-10"
         >
           {error && (
-            <div className="mb-4 text-red-400 text-xs py-2.5 px-3 rounded-lg border border-red-500/10 bg-red-500/5">
+            <div className="mb-4 text-red-400 text-xs py-2.5 px-3 rounded-xl border border-red-500/15 bg-red-500/5">
               {error}
             </div>
           )}
 
           <motion.button
-            whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleGoogleSignIn}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3.5 py-4 px-5 transition-all"
+            className="w-full flex items-center justify-center gap-3 py-4 px-5"
             style={{
-              background: "#161719",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 16,
-              cursor: loading ? "not-allowed" : "pointer"
+              background: "var(--surface)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              cursor: loading ? "not-allowed" : "pointer",
             }}
           >
             {loading ? (
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
-                className="w-5 h-5 rounded-full border-2 border-white/20"
-                style={{ borderTopColor: "#22c55e" }}
+                className="w-5 h-5 rounded-full border-2"
+                style={{ borderColor: "var(--border)", borderTopColor: "var(--accent)" }}
               />
             ) : (
               <>
                 <GoogleIcon size={20} />
-                <span className="text-white text-sm font-semibold">
+                <span style={{ color: "var(--text)", fontSize: 14, fontWeight: 600 }}>
                   Sign in with Google
                 </span>
               </>
@@ -123,15 +113,15 @@ export function LoginScreen({ oauthError }: { oauthError?: string | null }) {
           </motion.button>
         </motion.div>
 
-        {/* Gate enforcement description footer */}
+        {/* Footer note */}
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.5 }}
-          className="text-neutral-500 text-xs mt-12 leading-relaxed"
+          transition={{ delay: 0.4, duration: 0.45 }}
+          style={{ color: "var(--text-3)", fontSize: 12, marginTop: 40, lineHeight: 1.6, opacity: 0.8 }}
         >
-          Sign in using any standard Google Account as your master account.<br />
-          Inside, you can securely connect and monitor your university and personal mailboxes.
+          Sign in with any Google Account as your master account. Inside, connect and monitor your
+          university and personal mailboxes.
         </motion.p>
       </div>
     </div>

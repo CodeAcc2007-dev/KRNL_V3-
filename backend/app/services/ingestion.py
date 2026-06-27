@@ -88,7 +88,16 @@ def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
     Structured event details extraction.
     """
     clean_body = clean_email_body(body)
-    prompt = f"Analyze the email Subject and Body provided below. Extract the key metadata and details in structured JSON format according to the schema:\n\nSubject: {subject}\n\nBody:\n{clean_body}"
+    prompt = (
+        "Analyze the email Subject and Body provided below. Extract the key metadata "
+        "and details in structured JSON format according to the schema.\n"
+        f"This email was received on {msg_date}. Resolve every date relative to that "
+        "received date: if the year is not stated, infer it from the received date "
+        "(events are upcoming or very recent, never years in the past). When the email "
+        "states a specific time of day, include it in the deadline as HH:MM:SS; if no "
+        "time is given, output the date only (YYYY-MM-DD).\n\n"
+        f"Subject: {subject}\n\nBody:\n{clean_body}"
+    )
     try:
         response = genai_client.models.generate_content(
             model="gemini-3.1-flash-lite",

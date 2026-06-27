@@ -118,17 +118,44 @@ export function DeadlinesScreen() {
     }
   };
 
+  // Parse the raw stored deadline as wall-clock time. Extracted deadlines are
+  // naive local strings ("YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS"), so we read the
+  // components directly instead of new Date() to avoid UTC offset shifts.
+  const parseDeadline = (raw?: string) => {
+    const m = (raw || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+    if (!m) return null;
+    const [, y, mo, d, hh, mm] = m;
+    const hasTime = hh !== undefined && !(hh === "00" && mm === "00");
+    const date = new Date(Number(y), Number(mo) - 1, Number(d), hh ? Number(hh) : 0, mm ? Number(mm) : 0);
+    return { date, hasTime };
+  };
+
+  const formatTime = (date: Date) =>
+    date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+  // Within a group/day: timed items first (chronological), undated items below.
+  const byTimeThenUndated = (a: EventItem, b: EventItem) => {
+    const pa = parseDeadline(a.deadline);
+    const pb = parseDeadline(b.deadline);
+    const ha = pa?.hasTime ? 1 : 0;
+    const hb = pb?.hasTime ? 1 : 0;
+    if (ha !== hb) return hb - ha;
+    return (pa?.date.getTime() ?? 0) - (pb?.date.getTime() ?? 0);
+  };
+
   const shortDue = (item: EventItem) => {
-    try {
-      const date = new Date(item.deadline);
-      const isMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
-      const u = item.urgency_label?.toLowerCase();
-      if (u === "today") return isMidnight ? "Today" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      if (u === "tomorrow") return "Tomorrow";
-      return date.toLocaleDateString([], { month: "short", day: "numeric" });
-    } catch {
-      return "";
+    const p = parseDeadline(item.deadline);
+    if (!p) return "";
+    const u = item.urgency_label?.toLowerCase();
+    if (u === "today" || u === "tomorrow") {
+      return p.hasTime ? formatTime(p.date) : u === "today" ? "Today" : "Tomorrow";
     }
+    const sameYear = p.date.getFullYear() === new Date().getFullYear();
+    const datePart = p.date.toLocaleDateString(
+      [],
+      sameYear ? { month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" }
+    );
+    return p.hasTime ? `${datePart}, ${formatTime(p.date)}` : datePart;
   };
 
   // Group deadlines into ordered urgency sections (replaces the filter tabs).
@@ -142,7 +169,9 @@ export function DeadlinesScreen() {
   const groupedDeadlines = urgencyGroups
     .map((g) => ({
       ...g,
-      items: deadlines.filter((d) => (d.urgency_label?.toLowerCase() || "upcoming") === g.key),
+      items: deadlines
+        .filter((d) => (d.urgency_label?.toLowerCase() || "upcoming") === g.key)
+        .sort(byTimeThenUndated),
     }))
     .filter((g) => g.items.length > 0);
 
@@ -203,7 +232,7 @@ export function DeadlinesScreen() {
 
   const getDeadlinesForDate = (y: number, m: number, d: number) => {
     const prefix = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    return deadlines.filter((item) => item.deadline && item.deadline.startsWith(prefix));
+    return deadlines.filter((item) => item.deadline && item.deadline.startsWith(prefix)).sort(byTimeThenUndated);
   };
 
   const getDotColorForDate = (dateDeadlines: EventItem[]) => {
@@ -500,17 +529,27 @@ export function DeadlinesScreen() {
                         )}
                       </button>
                       <div className="flex-1 min-w-0">
-                        <span
-                          className="line-clamp-1"
-                          style={{
-                            color: isDone ? "var(--text-3)" : "var(--text)",
-                            fontSize: 13.5,
-                            fontWeight: 500,
-                            textDecoration: isDone ? "line-through" : "none",
-                          }}
-                        >
-                          {item.display_name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="line-clamp-1 flex-1 min-w-0"
+                            style={{
+                              color: isDone ? "var(--text-3)" : "var(--text)",
+                              fontSize: 13.5,
+                              fontWeight: 500,
+                              textDecoration: isDone ? "line-through" : "none",
+                            }}
+                          >
+                            {item.display_name}
+                          </span>
+                          {(() => {
+                            const p = parseDeadline(item.deadline);
+                            return p?.hasTime ? (
+                              <span style={{ color: "var(--accent)", fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>
+                                {formatTime(p.date)}
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
                         {item.category && (
                           <div className="flex items-center gap-1.5 mt-0.5">
                             <span

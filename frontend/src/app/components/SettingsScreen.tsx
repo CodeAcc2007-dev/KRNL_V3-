@@ -1,10 +1,40 @@
 import { useState, useEffect } from "react";
-import { Plus, RefreshCw, Mail, ChevronRight, AlertTriangle, Info, Shield, Check, LogOut, Trash2, Loader2 } from "lucide-react";
+import { Plus, Mail, AlertTriangle, Shield, Check, LogOut, Trash2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
 
 const tracks = ["Software", "Quant", "Research", "Core", "Design", "Finance"];
+
+// Relative "x ago" label from an ISO timestamp.
+function agoLabel(ts?: string | null) {
+  if (!ts) return "never";
+  const diffMins = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  if (isNaN(diffMins)) return "never";
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const h = Math.floor(diffMins / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+// Shared grouped-list card (Apple Settings style).
+const groupCard: React.CSSProperties = {
+  background: "var(--surface)",
+  border: "1px solid var(--border)",
+  borderRadius: 12,
+  overflow: "hidden",
+};
+const sectionLabel: React.CSSProperties = {
+  color: "var(--text-3)",
+  fontSize: 12,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+};
+const rowDivider = (last: boolean): React.CSSProperties => ({
+  borderBottom: last ? "none" : "1px solid var(--border)",
+});
 
 // Google "G" SVG logo
 function GoogleIcon({ size = 20 }: { size?: number }) {
@@ -247,7 +277,7 @@ export function SettingsScreen() {
       if (res.ok) {
         // Refresh accounts list
         await fetchAccounts();
-        
+
         // Trigger initial sync asynchronously (don't block the UI if celery is down)
         try {
           await apiFetch("/api/v1/sync/trigger", { method: "POST" });
@@ -271,6 +301,23 @@ export function SettingsScreen() {
     }
   };
 
+  // Most recent sync across connected accounts (for the System group).
+  const lastSync = connectedAccounts
+    .map((a) => a.last_synced_at)
+    .filter(Boolean)
+    .sort()
+    .pop();
+
+  const modalInput: React.CSSProperties = {
+    width: "100%",
+    padding: "12px 14px",
+    color: "var(--text)",
+    background: "var(--bg)",
+    border: "1px solid var(--border)",
+    borderRadius: 10,
+    outline: "none",
+    fontSize: 14,
+  };
 
   return (
     <div className="flex flex-col h-full" style={{ background: "var(--bg)" }}>
@@ -278,7 +325,7 @@ export function SettingsScreen() {
         {/* Header */}
         <div className="px-4 pb-4">
           <span style={{ color: "var(--text)", fontSize: 20, fontWeight: 700, display: "block" }}>
-            Settings & Connections
+            Settings
           </span>
           <span style={{ color: "var(--text-3)", fontSize: 13, marginTop: 2, display: "block" }}>
             Manage your accounts and preferences
@@ -287,266 +334,126 @@ export function SettingsScreen() {
         <div style={{ height: 1, background: "var(--border)", margin: "0 16px 16px" }} />
       </div>
 
-      <div
-        className="flex-1 overflow-y-auto px-4"
-        style={{ scrollbarWidth: "none", paddingBottom: 110 }}
-      >
-        {/* Google Sign-In Block */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <GoogleIcon size={13} />
-            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Google Account
-            </span>
-          </div>
-
-          <AnimatePresence mode="wait">
+      <div className="flex-1 overflow-y-auto px-4" style={{ scrollbarWidth: "none", paddingBottom: 110 }}>
+        {/* ─── Account ─── */}
+        <div className="mb-6">
+          <span style={sectionLabel} className="block mb-2.5">Account</span>
+          <div style={groupCard}>
             {email ? (
-              <motion.div
-                key="signed-in"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                className="flex items-center gap-3 px-4 py-3.5"
-                style={{
-                  background: "rgba(66,133,244,0.07)",
-                  border: "1px solid rgba(66,133,244,0.25)",
-                  borderRadius: 16,
-                }}
-              >
-                {/* Google avatar placeholder */}
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "linear-gradient(135deg, #22c55e, #15803d)",
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: "white",
-                  }}
-                >
-                  {email.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span
-                    className="block truncate"
-                    style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}
-                  >
-                    {email}
-                  </span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Check size={10} color="#22c55e" strokeWidth={2.5} />
-                    <span style={{ color: "#22c55e", fontSize: 11 }}>Signed in with Google</span>
-                  </div>
-                </div>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleSignOut}
-                  disabled={loading}
-                  className="px-3 py-2 flex items-center gap-1.5"
-                  style={{
-                    background: "rgba(239,68,68,0.12)",
-                    border: "1px solid rgba(239,68,68,0.25)",
-                    borderRadius: 8,
-                    cursor: "pointer"
-                  }}
-                >
-                  <LogOut size={12} color="var(--danger)" />
-                  <span style={{ color: "var(--danger)", fontSize: 11, fontWeight: 700 }}>SIGN OUT</span>
-                </motion.button>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="signed-out"
-                initial={{ opacity: 0, scale: 0.97 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center justify-center px-4 py-6"
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 16,
-                }}
-              >
-                <span style={{ color: "var(--text-3)", fontSize: 13 }}>No active session found.</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Block 1: Connections */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Shield size={13} color="var(--text-3)" strokeWidth={2} />
-            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Connected Accounts
-            </span>
-          </div>
-
-          {accountsLoading ? (
-            <div className="flex flex-col items-center justify-center py-6 gap-2 text-[var(--text-3)]">
-              <Loader2 className="animate-spin" size={20} />
-              <span style={{ fontSize: 11 }}>Loading accounts...</span>
-            </div>
-          ) : connectedAccounts.length === 0 ? (
-            <div
-              className="flex items-center justify-center px-4 py-6 mb-3"
-              style={{
-                background: "var(--surface)",
-                border: "1px dashed var(--border)",
-                borderRadius: 16,
-              }}
-            >
-              <span style={{ color: "var(--text-3)", fontSize: 13 }}>No connected email accounts.</span>
-            </div>
-          ) : (
-            connectedAccounts.map((account) => {
-              const lastSyncedText = account.last_synced_at
-                ? (() => {
-                    try {
-                      const diffMs = new Date().getTime() - new Date(account.last_synced_at).getTime();
-                      const diffMins = Math.floor(diffMs / 60000);
-                      if (diffMins < 60) return `Synced ${diffMins}m ago`;
-                      const diffHours = Math.floor(diffMins / 60);
-                      if (diffHours < 24) return `Synced ${diffHours}h ago`;
-                      return `Synced ${Math.floor(diffHours / 24)}d ago`;
-                    } catch {
-                      return "Never synced";
-                    }
-                  })()
-                : "Never synced";
-
-              return (
-                <div
-                  key={account.id}
-                  className="flex items-center gap-3 px-4 py-3.5 mb-2"
-                  style={{
-                    background: "var(--surface)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 16,
-                  }}
-                >
+              <>
+                <div className="flex items-center gap-3 px-4 py-3">
                   <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: "rgba(16,185,129,0.1)",
-                      border: "1px solid rgba(16,185,129,0.2)",
-                    }}
+                    className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: "var(--surface-2, var(--border))", color: "var(--text)", fontSize: 15, fontWeight: 700 }}
                   >
-                    <Mail size={18} color="#10b981" strokeWidth={1.8} />
+                    {email.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span
-                      className="block truncate"
-                      style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}
-                    >
-                      {account.email_address}
+                    <span className="block truncate" style={{ color: "var(--text)", fontSize: 13.5, fontWeight: 500 }}>
+                      {email}
                     </span>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{
-                          background: account.connection_status === "connected" ? "#10b981" : "var(--danger)",
-                          boxShadow:
-                            account.connection_status === "connected"
-                              ? "0 0 5px #10b981"
-                              : "0 0 5px var(--danger)",
-                        }}
-                      />
-                      <RefreshCw size={10} color="#10b981" strokeWidth={2} />
-                      <span style={{ color: "#10b981", fontSize: 11 }}>{lastSyncedText}</span>
+                      <GoogleIcon size={11} />
+                      <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>Signed in with Google</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="px-2.5 py-1"
-                      style={{
-                        background: "rgba(16,185,129,0.1)",
-                        border: "1px solid rgba(16,185,129,0.25)",
-                        borderRadius: 8,
-                      }}
-                    >
-                      <span style={{ color: "#10b981", fontSize: 10, fontWeight: 700 }}>
-                        {account.account_type === "iitb_imap" ? "IITB" : "GMAIL"}
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  disabled={loading}
+                  className="w-full flex items-center gap-2 px-4 py-3"
+                  style={{ borderTop: "1px solid var(--border)", cursor: loading ? "not-allowed" : "pointer" }}
+                >
+                  <LogOut size={15} color="var(--danger)" strokeWidth={1.9} />
+                  <span style={{ color: "var(--danger)", fontSize: 13.5, fontWeight: 500 }}>Sign out</span>
+                </button>
+              </>
+            ) : (
+              <div className="px-4 py-5 text-center">
+                <span style={{ color: "var(--text-3)", fontSize: 13 }}>No active session found.</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─── Connected Accounts ─── */}
+        <div className="mb-6">
+          <span style={sectionLabel} className="block mb-2.5">Connected Accounts</span>
+          <div style={groupCard}>
+            {accountsLoading ? (
+              <div className="flex items-center justify-center gap-2 py-5 text-[var(--text-3)]">
+                <Loader2 className="animate-spin" size={16} />
+                <span style={{ fontSize: 12 }}>Loading accounts…</span>
+              </div>
+            ) : (
+              <>
+                {connectedAccounts.length === 0 && (
+                  <div className="px-4 py-4 text-center" style={rowDivider(false)}>
+                    <span style={{ color: "var(--text-3)", fontSize: 13 }}>No connected email accounts.</span>
+                  </div>
+                )}
+
+                {connectedAccounts.map((account) => (
+                  <div key={account.id} className="flex items-center gap-3 px-4 py-3" style={rowDivider(false)}>
+                    <Mail size={17} color="var(--text-3)" strokeWidth={1.8} className="flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="block truncate" style={{ color: "var(--text)", fontSize: 13.5, fontWeight: 500 }}>
+                        {account.email_address}
                       </span>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <div
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{ background: account.connection_status === "connected" ? "#10b981" : "var(--danger)" }}
+                        />
+                        <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>
+                          {account.last_synced_at ? `Synced ${agoLabel(account.last_synced_at)}` : "Never synced"}
+                        </span>
+                      </div>
                     </div>
+                    <span style={{ color: "var(--text-3)", fontSize: 10.5, fontWeight: 700, letterSpacing: 0.4 }}>
+                      {account.account_type === "iitb_imap" ? "IITB" : "GMAIL"}
+                    </span>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
                       onClick={() => handleDeleteAccount(account.id)}
-                      className="p-1 rounded hover:bg-red-500/10 transition-colors"
+                      className="p-1 flex-shrink-0"
                       style={{ cursor: "pointer" }}
                     >
-                      <Trash2 size={14} color="var(--danger)" />
+                      <Trash2 size={15} color="var(--danger)" strokeWidth={1.8} />
                     </motion.button>
                   </div>
+                ))}
+
+                {/* Connect IITB row */}
+                <button
+                  onClick={() => {
+                    setShowConnectModal(true);
+                    setConnectionError(null);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3"
+                  style={{ ...rowDivider(false), cursor: "pointer" }}
+                >
+                  <Plus size={17} color="var(--accent)" strokeWidth={2} className="flex-shrink-0" />
+                  <span style={{ color: "var(--accent)", fontSize: 13.5, fontWeight: 500 }}>Connect IITB Webmail</span>
+                </button>
+
+                {/* Connect Gmail (disabled) */}
+                <div className="w-full flex items-center gap-3 px-4 py-3 opacity-45" style={{ cursor: "not-allowed" }}>
+                  <Plus size={17} color="var(--text-3)" strokeWidth={2} className="flex-shrink-0" />
+                  <span style={{ color: "var(--text-3)", fontSize: 13.5 }}>Connect Gmail</span>
+                  <span className="ml-auto" style={{ color: "var(--text-3)", fontSize: 11 }}>Coming soon</span>
                 </div>
-              );
-            })
-          )}
-
-          <div className="flex flex-col gap-2 mt-3">
-            {/* Add IITB Webmail */}
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                setShowConnectModal(true);
-                setConnectionError(null);
-              }}
-              className="w-full flex items-center justify-center gap-2.5 py-4"
-              style={{
-                background: "transparent",
-                border: "1.5px dashed var(--border)",
-                borderRadius: 16,
-                cursor: "pointer",
-              }}
-            >
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <Plus size={14} color="var(--text-3)" strokeWidth={2} />
-              </div>
-              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Connect IITB Webmail</span>
-            </motion.button>
-
-            {/* Add Gmail (disabled) */}
-            <div
-              className="w-full flex items-center justify-center gap-2.5 py-4 opacity-50"
-              style={{
-                background: "transparent",
-                border: "1.5px dashed var(--border)",
-                borderRadius: 16,
-                cursor: "not-allowed",
-              }}
-            >
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center"
-                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-              >
-                <Plus size={14} color="var(--text-3)" strokeWidth={2} />
-              </div>
-              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Connect Gmail (Coming Soon)</span>
-            </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Block 2: Career Track Preferences */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Info size={13} color="var(--text-3)" strokeWidth={2} />
-            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Career Track
-            </span>
-          </div>
-
-          <div
-            className="px-4 py-4"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 16,
-            }}
-          >
+        {/* ─── Career Track ─── */}
+        <div className="mb-6">
+          <span style={sectionLabel} className="block mb-2.5">Career Track</span>
+          <div style={{ ...groupCard, padding: 16 }}>
             <p style={{ color: "var(--text-3)", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
-              KRNL surfaces relevant opportunities and filters emails based on your selected tracks.
+              Surfaces relevant opportunities and filters emails based on your selected tracks.
             </p>
             <div className="flex flex-wrap gap-2">
               {tracks.map((track) => {
@@ -556,11 +463,11 @@ export function SettingsScreen() {
                     key={track}
                     whileTap={{ scale: 0.93 }}
                     onClick={() => toggleTrack(track)}
-                    className="px-4 py-1.5"
+                    className="px-3.5 py-1.5"
                     style={{
-                      borderRadius: 24,
-                      background: active ? "rgba(59,130,246,0.18)" : "transparent",
-                      border: active ? "1px solid rgba(59,130,246,0.5)" : "1px solid var(--border)",
+                      borderRadius: 9,
+                      background: active ? "var(--accent-weak)" : "transparent",
+                      border: active ? "1px solid transparent" : "1px solid var(--border)",
                       color: active ? "var(--accent)" : "var(--text-3)",
                       fontSize: 13,
                       fontWeight: active ? 600 : 400,
@@ -574,64 +481,30 @@ export function SettingsScreen() {
           </div>
         </div>
 
-        {/* Block 3: System Details */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Info size={13} color="var(--text-3)" strokeWidth={2} />
-            <span style={{ color: "var(--text-3)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              System
-            </span>
-          </div>
-
-          <div
-            className="px-4 py-4"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 16,
-            }}
-          >
-            {[
-              { label: "Version", value: "KRNL v0.9.2 beta" },
-              { label: "Sync frequency", value: "Every 5 minutes" },
-              { label: "AI Model", value: "claude-sonnet-4-6" },
-              { label: "Data stored", value: "On-device only" },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between py-2.5"
-                style={{ borderBottom: "1px solid var(--border)" }}
-              >
-                <span style={{ color: "var(--text-3)", fontSize: 13 }}>{item.label}</span>
-                <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>{item.value}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between py-2.5">
-              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Last full sync</span>
-              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>Just now</span>
+        {/* ─── System ─── */}
+        <div className="mb-6">
+          <span style={sectionLabel} className="block mb-2.5">System</span>
+          <div style={groupCard}>
+            <div className="flex items-center justify-between px-4 py-3" style={rowDivider(false)}>
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Version</span>
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>v0.9.2 beta</span>
+            </div>
+            <div className="flex items-center justify-between px-4 py-3">
+              <span style={{ color: "var(--text-3)", fontSize: 13 }}>Last synced</span>
+              <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 500 }}>{agoLabel(lastSync)}</span>
             </div>
           </div>
         </div>
 
-        {/* Danger Zone */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle size={13} color="var(--danger)" strokeWidth={2} />
-            <span style={{ color: "var(--danger)", fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-              Danger Zone & Compliance
-            </span>
-          </div>
+        {/* ─── Danger Zone ─── */}
+        <div className="mb-2">
+          <span style={{ ...sectionLabel, color: "var(--danger)" }} className="block mb-2.5">
+            Danger Zone &amp; Compliance
+          </span>
 
-          <div
-            className="px-4 py-4 mb-3"
-            style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border)",
-              borderRadius: 16,
-            }}
-          >
+          <div style={{ ...groupCard, padding: 16 }} className="mb-3">
             <p style={{ color: "var(--text-3)", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
-              Under GDPR, you have the right to portability. Export all your user profile, events, and connected accounts data in a structured ZIP.
+              Under GDPR you have the right to portability. Export your profile, events, and connected-account data as a ZIP.
             </p>
             <motion.button
               whileTap={{ scale: 0.98 }}
@@ -639,30 +512,20 @@ export function SettingsScreen() {
               disabled={exporting}
               className="w-full py-3 flex items-center justify-center gap-2"
               style={{
-                background: "rgba(255,255,255,0.04)",
+                background: "transparent",
                 border: "1px solid var(--border)",
-                borderRadius: 12,
-                cursor: exporting ? "not-allowed" : "pointer"
+                borderRadius: 10,
+                cursor: exporting ? "not-allowed" : "pointer",
               }}
             >
               {exporting ? (
                 <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: "50%",
-                      border: "1.5px solid rgba(255,255,255,0.2)",
-                      borderTopColor: "#ffffff",
-                    }}
-                  />
-                  <span style={{ color: "var(--text-3)", fontSize: 13 }}>Exporting...</span>
+                  <Loader2 size={14} className="animate-spin" color="var(--text-3)" />
+                  <span style={{ color: "var(--text-3)", fontSize: 13 }}>Exporting…</span>
                 </>
               ) : (
                 <>
-                  <Shield size={14} color="var(--text)" />
+                  <Shield size={14} color="var(--text)" strokeWidth={1.9} />
                   <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>Export My Data (ZIP)</span>
                 </>
               )}
@@ -677,20 +540,16 @@ export function SettingsScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 className="px-4 py-4"
-                style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 16,
-                }}
+                style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12 }}
               >
                 <div className="flex gap-2.5 items-start">
                   <AlertTriangle size={18} color="var(--danger)" className="flex-shrink-0 mt-0.5" />
                   <div>
                     <span style={{ color: "var(--danger)", fontSize: 13, fontWeight: 600, display: "block" }}>
-                      Account Scheduled for Deletion
+                      Account scheduled for deletion
                     </span>
                     <span style={{ color: "var(--text-3)", fontSize: 12, marginTop: 4, display: "block", lineHeight: 1.4 }}>
-                      Your account data will be permanently wiped in 24 hours (due at {deletionDueAt ? new Date(deletionDueAt).toLocaleString() : ""}). You can cancel this anytime by clicking below.
+                      Your data will be permanently wiped in 24 hours (due {deletionDueAt ? new Date(deletionDueAt).toLocaleString() : ""}). You can cancel anytime below.
                     </span>
                   </div>
                 </div>
@@ -700,31 +559,27 @@ export function SettingsScreen() {
                   disabled={confirmDeleteLoading}
                   className="w-full mt-4 py-2.5 flex items-center justify-center gap-2"
                   style={{
-                    background: "rgba(16,185,129,0.12)",
-                    border: "1px solid rgba(16,185,129,0.3)",
+                    background: "transparent",
+                    border: "1px solid var(--border)",
                     borderRadius: 10,
-                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
+                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer",
                   }}
                 >
                   <Check size={14} color="#34d399" />
-                  <span style={{ color: "#34d399", fontSize: 13, fontWeight: 600 }}>Cancel Deletion Request</span>
+                  <span style={{ color: "var(--text)", fontSize: 13, fontWeight: 600 }}>Cancel deletion request</span>
                 </motion.button>
               </motion.div>
             ) : showDangerConfirm ? (
               <motion.div
                 key="confirm"
-                initial={{ opacity: 0, scale: 0.97 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.97 }}
+                exit={{ opacity: 0, scale: 0.98 }}
                 className="px-4 py-4"
-                style={{
-                  background: "rgba(239,68,68,0.06)",
-                  border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 16,
-                }}
+                style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 12 }}
               >
                 <p style={{ color: "var(--danger)", fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
-                  This will schedule your account and all data (emails, connected credentials, calendar syncs, vectors) for permanent deletion.
+                  This schedules your account and all data (emails, credentials, calendar syncs, vectors) for permanent deletion.
                 </p>
                 <div className="mb-4">
                   <span style={{ color: "var(--text-3)", fontSize: 11, display: "block", marginBottom: 6 }}>
@@ -735,16 +590,7 @@ export function SettingsScreen() {
                     value={deletionInput}
                     onChange={(e) => setDeletionInput(e.target.value)}
                     placeholder="DELETE"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      color: "#ffffff",
-                      background: "#0e0f11",
-                      border: "1px solid var(--border)",
-                      borderRadius: 8,
-                      outline: "none",
-                      fontSize: 14,
-                    }}
+                    style={{ ...modalInput, fontSize: 14 }}
                   />
                 </div>
                 <div className="flex gap-2">
@@ -762,7 +608,7 @@ export function SettingsScreen() {
                       color: "var(--text-3)",
                       fontSize: 13,
                       fontWeight: 600,
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   >
                     Cancel
@@ -773,17 +619,16 @@ export function SettingsScreen() {
                     disabled={deletionInput !== "DELETE" || confirmDeleteLoading}
                     className="flex-1 py-2.5 flex items-center justify-center gap-1.5"
                     style={{
-                      background: deletionInput === "DELETE" ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.05)",
-                      border: deletionInput === "DELETE" ? "1px solid rgba(239,68,68,0.4)" : "1px solid rgba(239,68,68,0.15)",
+                      background: deletionInput === "DELETE" ? "var(--danger)" : "rgba(239,68,68,0.12)",
                       borderRadius: 10,
-                      color: deletionInput === "DELETE" ? "var(--danger)" : "rgba(248,113,113,0.4)",
+                      color: deletionInput === "DELETE" ? "#fff" : "rgba(248,113,113,0.5)",
                       fontSize: 13,
                       fontWeight: 600,
-                      cursor: deletionInput === "DELETE" ? "pointer" : "not-allowed"
+                      cursor: deletionInput === "DELETE" ? "pointer" : "not-allowed",
                     }}
                   >
                     <Trash2 size={13} />
-                    <span>Confirm Delete</span>
+                    <span>Confirm delete</span>
                   </motion.button>
                 </div>
               </motion.div>
@@ -792,17 +637,17 @@ export function SettingsScreen() {
                 key="trigger"
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowDangerConfirm(true)}
-                className="w-full py-4 flex items-center justify-center gap-2.5"
+                className="w-full py-3.5 flex items-center justify-center gap-2"
                 style={{
-                  background: "rgba(239,68,68,0.08)",
-                  border: "1px solid rgba(239,68,68,0.25)",
-                  borderRadius: 16,
-                  cursor: "pointer"
+                  background: "transparent",
+                  border: "1px solid rgba(239,68,68,0.3)",
+                  borderRadius: 12,
+                  cursor: "pointer",
                 }}
               >
-                <Trash2 size={16} color="var(--danger)" strokeWidth={2} />
-                <span style={{ color: "var(--danger)", fontSize: 14, fontWeight: 600 }}>
-                  Disconnect Account & Wipe Data
+                <Trash2 size={15} color="var(--danger)" strokeWidth={1.9} />
+                <span style={{ color: "var(--danger)", fontSize: 13.5, fontWeight: 600 }}>
+                  Disconnect account &amp; wipe data
                 </span>
               </motion.button>
             )}
@@ -820,15 +665,11 @@ export function SettingsScreen() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ scale: 0.95, y: 15 }}
+              initial={{ scale: 0.97, y: 12 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="w-full max-w-md p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
-              style={{
-                background: "#0e0f11",
-                border: "1px solid var(--border)",
-                borderRadius: 24,
-              }}
+              exit={{ scale: 0.97, y: 12 }}
+              className="w-full max-w-md p-6"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16 }}
             >
               <h3 style={{ color: "var(--text)", fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
                 Connect IITB Webmail
@@ -838,9 +679,7 @@ export function SettingsScreen() {
               </p>
 
               {connectionError && (
-                <div
-                  className="mb-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs flex gap-2 items-start"
-                >
+                <div className="mb-4 p-3 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-xs flex gap-2 items-start">
                   <AlertTriangle size={14} className="flex-shrink-0 mt-0.5" />
                   <span>{connectionError}</span>
                 </div>
@@ -857,22 +696,12 @@ export function SettingsScreen() {
                     value={ldapEmail}
                     onChange={(e) => {
                       setLdapEmail(e.target.value);
-                      // Auto-fill username if email has @iitb.ac.in
                       const parts = e.target.value.split("@");
                       if (parts.length > 0 && parts[1] === "iitb.ac.in" && !ldapUsername) {
                         setLdapUsername(parts[0]);
                       }
                     }}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      color: "#ffffff",
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      outline: "none",
-                      fontSize: 14,
-                    }}
+                    style={modalInput}
                   />
                 </div>
 
@@ -885,16 +714,7 @@ export function SettingsScreen() {
                     placeholder="e.g. 25b2164"
                     value={ldapUsername}
                     onChange={(e) => setLdapUsername(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      color: "#ffffff",
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      outline: "none",
-                      fontSize: 14,
-                    }}
+                    style={modalInput}
                   />
                 </div>
 
@@ -907,16 +727,7 @@ export function SettingsScreen() {
                     placeholder="••••••••"
                     value={ldapPassword}
                     onChange={(e) => setLdapPassword(e.target.value)}
-                    style={{
-                      width: "100%",
-                      padding: "12px 14px",
-                      color: "#ffffff",
-                      background: "var(--surface)",
-                      border: "1px solid var(--border)",
-                      borderRadius: 12,
-                      outline: "none",
-                      fontSize: 14,
-                    }}
+                    style={modalInput}
                   />
                 </div>
               </div>
@@ -934,13 +745,13 @@ export function SettingsScreen() {
                   disabled={connectionLoading}
                   className="flex-1 py-3"
                   style={{
-                    background: "var(--surface)",
+                    background: "var(--bg)",
                     border: "1px solid var(--border)",
-                    borderRadius: 12,
+                    borderRadius: 10,
                     color: "var(--text-3)",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: connectionLoading ? "not-allowed" : "pointer"
+                    cursor: connectionLoading ? "not-allowed" : "pointer",
                   }}
                 >
                   Cancel
@@ -952,17 +763,17 @@ export function SettingsScreen() {
                   className="flex-1 py-3 flex items-center justify-center gap-2"
                   style={{
                     background: (ldapEmail && ldapUsername && ldapPassword) ? "var(--accent)" : "rgba(59,130,246,0.2)",
-                    borderRadius: 12,
-                    color: (ldapEmail && ldapUsername && ldapPassword) ? "#ffffff" : "rgba(255,255,255,0.4)",
+                    borderRadius: 10,
+                    color: (ldapEmail && ldapUsername && ldapPassword) ? "#fff" : "rgba(255,255,255,0.4)",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: (connectionLoading || !ldapEmail || !ldapUsername || !ldapPassword) ? "not-allowed" : "pointer"
+                    cursor: (connectionLoading || !ldapEmail || !ldapUsername || !ldapPassword) ? "not-allowed" : "pointer",
                   }}
                 >
                   {connectionLoading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      <span>Verifying...</span>
+                      <span>Verifying…</span>
                     </>
                   ) : (
                     <span>Connect</span>
@@ -974,7 +785,7 @@ export function SettingsScreen() {
         )}
       </AnimatePresence>
 
-      {/* Custom Disconnect Confirmation Modal */}
+      {/* Disconnect Confirmation Modal */}
       <AnimatePresence>
         {confirmDeleteAccountId !== null && (
           <motion.div
@@ -984,22 +795,18 @@ export function SettingsScreen() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ scale: 0.95, y: 15 }}
+              initial={{ scale: 0.97, y: 12 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="w-full max-w-sm p-6 overflow-hidden text-left align-middle transition-all transform shadow-xl"
-              style={{
-                background: "#0e0f11",
-                border: "1px solid var(--border)",
-                borderRadius: 24,
-              }}
+              exit={{ scale: 0.97, y: 12 }}
+              className="w-full max-w-sm p-6"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16 }}
             >
               <h3 style={{ color: "var(--danger)", fontSize: 16, fontWeight: 700, marginBottom: 8 }} className="flex items-center gap-2">
                 <AlertTriangle size={18} />
-                Disconnect Account?
+                Disconnect account?
               </h3>
               <p style={{ color: "var(--text-3)", fontSize: 13, lineHeight: 1.5, marginBottom: 20 }}>
-                Are you sure you want to disconnect this email account? This will stop future email syncs.
+                This stops future email syncs for this account.
               </p>
 
               <div className="flex gap-3">
@@ -1009,13 +816,13 @@ export function SettingsScreen() {
                   disabled={confirmDeleteLoading}
                   className="flex-1 py-3"
                   style={{
-                    background: "var(--surface)",
+                    background: "var(--bg)",
                     border: "1px solid var(--border)",
-                    borderRadius: 12,
+                    borderRadius: 10,
                     color: "var(--text-3)",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
+                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer",
                   }}
                 >
                   Cancel
@@ -1026,19 +833,18 @@ export function SettingsScreen() {
                   disabled={confirmDeleteLoading}
                   className="flex-1 py-3 flex items-center justify-center gap-2"
                   style={{
-                    background: "rgba(239,68,68,0.15)",
-                    border: "1px solid rgba(239,68,68,0.4)",
-                    borderRadius: 12,
-                    color: "var(--danger)",
+                    background: "var(--danger)",
+                    borderRadius: 10,
+                    color: "#fff",
                     fontSize: 14,
                     fontWeight: 600,
-                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer"
+                    cursor: confirmDeleteLoading ? "not-allowed" : "pointer",
                   }}
                 >
                   {confirmDeleteLoading ? (
                     <>
                       <Loader2 size={16} className="animate-spin" />
-                      <span>Disconnecting...</span>
+                      <span>Disconnecting…</span>
                     </>
                   ) : (
                     <span>Disconnect</span>

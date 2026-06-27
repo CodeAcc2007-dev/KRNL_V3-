@@ -106,7 +106,7 @@ def find_matching_event(user_id: str, email_text: str, supabase, limit: int = 3)
         if not event:
             continue
         dl = parse_deadline(event.get("deadline"))
-        if dl is None or dl < today:  # active = future deadline
+        if dl is None or dl.date() < today.date():  # active = deadline today or later
             continue
         # Confirm only the top active candidate (caps the model call at one per email).
         return event if confirm_same_event(email_text, event) else None
@@ -128,3 +128,25 @@ def apply_extension(event: dict, new_deadline: str, update_type: Optional[str],
         "deadline_history": history,
         "last_update_type": update_type,
     }).eq("id", event["id"]).execute()
+
+
+def apply_update(event: dict, new_deadline: Optional[str], update_type: Optional[str],
+                 message_id: str, supabase) -> None:
+    """Merge any update email (reminder, deadline/venue change, …) into an existing
+    event instead of creating a duplicate. Prefer the update's timing/date when it
+    provides one; a reminder that restates the same date is a no-op. Always record
+    the update type."""
+    fields: dict = {"last_update_type": update_type}
+    cur = parse_deadline(event.get("deadline"))
+    new = parse_deadline(new_deadline)
+    if new is not None and new != cur:
+        history = list(event.get("deadline_history") or [])
+        history.append({
+            "old": event.get("deadline"),
+            "new": new_deadline,
+            "message_id": message_id,
+            "at": datetime.utcnow().isoformat(),
+        })
+        fields["deadline"] = new_deadline
+        fields["deadline_history"] = history
+    supabase.table("events").update(fields).eq("id", event["id"]).execute()

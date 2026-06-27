@@ -87,6 +87,8 @@ interface EmailDetailScreenProps {
     created_at?: string;
   };
   onBack: () => void;
+  /** Slide-in direction: "right" (default, page-style) or "up" (sheet-style). */
+  direction?: "right" | "up";
 }
 
 const priorityConfig = {
@@ -95,7 +97,7 @@ const priorityConfig = {
   Low: { color: "var(--text-3)", bg: "rgba(138,143,152,0.08)", border: "rgba(138,143,152,0.15)" },
 };
 
-export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailScreenProps) {
+export function EmailDetailScreen({ eventId, previewData, onBack, direction = "right" }: EmailDetailScreenProps) {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,6 +156,20 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
   const formatFullDate = (dateStr?: string) => {
     if (!dateStr) return "—";
     try {
+      // A bare date ("YYYY-MM-DD") has no real time — show date only. Rendering
+      // it via new Date() would parse it as UTC midnight and show a phantom
+      // 5:30 AM (the IST offset). Timestamps that carry a time render with it.
+      const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+      const hasTime = !!(m && m[4] !== undefined && !(m[4] === "00" && m[5] === "00"));
+      if (m && !hasTime) {
+        const dateOnly = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+        return dateOnly.toLocaleDateString("en-IN", {
+          weekday: "short",
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+      }
       const date = new Date(dateStr);
       return date.toLocaleDateString("en-IN", {
         weekday: "short",
@@ -194,11 +210,16 @@ export function EmailDetailScreen({ eventId, previewData, onBack }: EmailDetailS
   const pLabel = getPriorityLabel(displayEvent?.personalized_priority);
   const pConfig = priorityConfig[pLabel as keyof typeof priorityConfig];
 
+  const slide =
+    direction === "up"
+      ? { initial: { y: "100%", opacity: 0.5 }, animate: { y: 0, opacity: 1 }, exit: { y: "100%", opacity: 0 } }
+      : { initial: { x: "100%", opacity: 0.5 }, animate: { x: 0, opacity: 1 }, exit: { x: "100%", opacity: 0 } };
+
   return (
     <motion.div
-      initial={{ x: "100%", opacity: 0.5 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: "100%", opacity: 0 }}
+      initial={slide.initial}
+      animate={slide.animate}
+      exit={slide.exit}
       transition={{ type: "spring", stiffness: 350, damping: 35, mass: 0.8 }}
       className="absolute inset-0 flex flex-col z-30"
       style={{ background: "var(--bg)" }}
