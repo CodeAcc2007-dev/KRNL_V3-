@@ -8,6 +8,17 @@ from app.utils.dates import ist_today, parse_deadline_date
 
 logger = logging.getLogger("uvicorn.error")
 
+def dedupe_vector_docs(vector_docs: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Keep the highest-ranked chunk per event_id (first occurrence wins)."""
+    seen = set()
+    out = []
+    for eid, txt in vector_docs:
+        if eid in seen:
+            continue
+        seen.add(eid)
+        out.append((eid, txt))
+    return out
+
 def hybrid_retrieval(query: str, user_id: str, limit: int = 5) -> list[dict]:
     """
     Performs hybrid retrieval using Qdrant vector search and Supabase text search,
@@ -73,6 +84,8 @@ def hybrid_retrieval(query: str, user_id: str, limit: int = 5) -> list[dict]:
         txt = p.payload.get("chunk_text") if p.payload else None
         if eid and txt:
             vector_docs.append((eid, txt))
+
+    vector_docs = dedupe_vector_docs(vector_docs)
 
     # Map text search results (events) to (event_id, text)
     text_docs = []
