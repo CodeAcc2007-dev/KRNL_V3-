@@ -60,17 +60,33 @@ is on its own branch and is **partially done** — resume there next session.
   blue, web blue). **Browser/device Back now closes the detail** (History API: pushState on
   open, popstate → onBack; in-app back calls `history.back()`).
 
+## 2026-06-27 continuation — Deadlines redesigned (DONE)
+
+Commits `a2c8250`, `cfcabf6`, `3736e83` on `redesign`:
+- Cased urgency labels ("This Week"/"Tomorrow"/"Overdue", not raw `this_week`); removed glow
+  box-shadows on the timeline dots; filter tabs restyled to the Inbox pill style.
+- **Full reimagining → Apple-Reminders/Things checklist.** Replaced the boxed timeline cards
+  with grouped checklist rows: tap-to-complete circle (`Circle`/`CheckCircle2`), title, due
+  chip (`shortDue`), and a **category color-dot** (`categoryColor`: Academic blue / Career
+  green / Cultural pink / Technical cyan / Security amber). Hairline `divide-y`, no boxes.
+- Deadlines grouped into urgency sections (`urgencyGroups`/`groupedDeadlines`).
+- **Per user: urgency groups are now the top TABS** (`activeGroup`/`currentGroup`); the active
+  group renders as the checklist below (no inline section headers). Replaced the old
+  Overdue/This-Week/Later filter tabs. Calendar view's selected-date agenda uses the same
+  checklist rows. Removed dead `getCardStyle`/`formatDueText`/`filteredListDeadlines`/`filters`.
+
 ## NOT done — resume here next session
 
 Remaining redesign screens (palette token-mapped via script, but need structural polish +
 screenshot pass):
-- **Ask KRNL** (`AskKrnlScreen.tsx`) — also fix literal `*markdown*` rendering in messages and
-  the "Hi! I'm KRNL" greeting wording.
-- **Deadlines** (`DeadlinesScreen.tsx`) — remove leftover glow box-shadows on the urgency dots
-  (`0 0 8px rgba(...)`), fix raw `this_week`/`tomorrow` label casing → "This Week"/"Tomorrow".
+- **Ask KRNL** (`AskKrnlScreen.tsx`) — restyle bubbles/avatar/input; fix literal `*markdown*`
+  rendering in messages (`renderAIText` only handles `**bold**`, not `*italics*`) and the
+  "Hi! I'm KRNL" greeting wording.
 - **Settings** (`SettingsScreen.tsx`) — green gradient on the Google-account avatar (line ~321)
   to flatten; verify the System section isn't hidden behind the floating nav (add bottom pad).
 - **Login** (`LoginScreen.tsx`) — verify in the new tokens.
+- **Optional:** Deadlines **calendar month grid** still a bit boxy (cards `rounded-2xl`); could
+  flatten to match. PWA "Add to Home Screen" banner overlaps the floating nav.
 
 Then: Ask KRNL output quality/alignment (deferred feature task), and the original open issue A
 (`query.py` drops structured deadline from LLM context).
