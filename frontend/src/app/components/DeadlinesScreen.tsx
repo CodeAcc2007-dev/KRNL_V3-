@@ -27,6 +27,7 @@ export function DeadlinesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [activeGroup, setActiveGroup] = useState<string>("");
 
   // Calendar State
   const [activeView, setActiveView] = useState<"list" | "calendar">("list");
@@ -144,6 +145,9 @@ export function DeadlinesScreen() {
       items: deadlines.filter((d) => (d.urgency_label?.toLowerCase() || "upcoming") === g.key),
     }))
     .filter((g) => g.items.length > 0);
+
+  // Active group tab (defaults to the most urgent non-empty group).
+  const currentGroup = groupedDeadlines.find((g) => g.key === activeGroup) || groupedDeadlines[0];
 
   const dueThisWeekCount = deadlines.filter((item) => {
     const urg = item.urgency_label?.toLowerCase() || "upcoming";
@@ -280,6 +284,31 @@ export function DeadlinesScreen() {
             )}
           </div>
         </div>
+
+        {activeView === "list" && groupedDeadlines.length > 0 && (
+          <div className="flex gap-2 px-4 pb-4 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            {groupedDeadlines.map((g) => {
+              const active = currentGroup?.key === g.key;
+              return (
+                <motion.button
+                  key={g.key}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActiveGroup(g.key)}
+                  className="whitespace-nowrap px-3.5 py-1.5 flex-shrink-0"
+                  style={{
+                    borderRadius: 999,
+                    background: active ? "var(--accent-weak)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--text-3)",
+                    fontSize: 13,
+                    fontWeight: active ? 600 : 500,
+                  }}
+                >
+                  {g.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -296,92 +325,74 @@ export function DeadlinesScreen() {
             <span className="text-xs">Fetching deadline logs...</span>
           </div>
         ) : activeView === "list" ? (
-          /* CHECKLIST GROUPED VIEW */
-          <div className="flex flex-col gap-5 pt-1">
-            {groupedDeadlines.length === 0 ? (
+          /* CHECKLIST VIEW (active urgency group) */
+          <div className="pt-1">
+            {!currentGroup ? (
               <div className="flex flex-col items-center justify-center py-16 text-[var(--text-3)] gap-1">
                 <span className="text-sm font-semibold">Clean slate</span>
                 <span className="text-xs opacity-70">No deadlines right now.</span>
               </div>
             ) : (
-              groupedDeadlines.map((group) => (
-                <div key={group.key}>
-                  <div className="flex items-center gap-2 mb-1 px-1">
-                    <span
-                      style={{
-                        color: group.color,
-                        fontSize: 11,
-                        fontWeight: 700,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
+              <div className="flex flex-col divide-y" style={{ borderColor: "var(--border)" }}>
+                {currentGroup.items.map((item) => {
+                  const isDone = checked.includes(item.id);
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => setSelectedEventId(item.id)}
+                      className="flex items-center gap-3 py-3 cursor-pointer"
                     >
-                      {group.label}
-                    </span>
-                    <span style={{ color: "var(--text-3)", fontSize: 11 }}>{group.items.length}</span>
-                  </div>
-                  <div className="flex flex-col divide-y" style={{ borderColor: "var(--border)" }}>
-                    {group.items.map((item) => {
-                      const isDone = checked.includes(item.id);
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => setSelectedEventId(item.id)}
-                          className="flex items-center gap-3 py-3 cursor-pointer"
-                        >
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
-                            className="flex-shrink-0 active:scale-90 transition-transform"
+                      <button
+                        onClick={(e) => { e.stopPropagation(); toggleCheck(item.id); }}
+                        className="flex-shrink-0 active:scale-90 transition-transform"
+                      >
+                        {isDone ? (
+                          <CheckCircle2 size={21} color="#22c55e" strokeWidth={2} />
+                        ) : (
+                          <Circle size={21} color="var(--text-3)" strokeWidth={1.6} />
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="line-clamp-1 flex-1 min-w-0"
+                            style={{
+                              color: isDone ? "var(--text-3)" : "var(--text)",
+                              fontSize: 14,
+                              fontWeight: 500,
+                              textDecoration: isDone ? "line-through" : "none",
+                            }}
                           >
-                            {isDone ? (
-                              <CheckCircle2 size={21} color="#22c55e" strokeWidth={2} />
-                            ) : (
-                              <Circle size={21} color="var(--text-3)" strokeWidth={1.6} />
-                            )}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="line-clamp-1 flex-1 min-w-0"
-                                style={{
-                                  color: isDone ? "var(--text-3)" : "var(--text)",
-                                  fontSize: 14,
-                                  fontWeight: 500,
-                                  textDecoration: isDone ? "line-through" : "none",
-                                }}
-                              >
-                                {item.display_name}
-                              </span>
-                              <span style={{ color: group.color, fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>
-                                {isDone ? "Done" : shortDue(item)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              {item.category && (
-                                <>
-                                  <span
-                                    style={{
-                                      width: 6,
-                                      height: 6,
-                                      borderRadius: "50%",
-                                      background: categoryColor(item.category),
-                                      flexShrink: 0,
-                                    }}
-                                  />
-                                  <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{item.category}</span>
-                                </>
-                              )}
-                              {item.deadline_history && item.deadline_history.length > 0 && (
-                                <span style={{ color: "#fbbf24", fontSize: 10.5 }}>· extended</span>
-                              )}
-                            </div>
-                          </div>
+                            {item.display_name}
+                          </span>
+                          <span style={{ color: currentGroup.color, fontSize: 11.5, fontWeight: 600, flexShrink: 0 }}>
+                            {isDone ? "Done" : shortDue(item)}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {item.category && (
+                            <>
+                              <span
+                                style={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: "50%",
+                                  background: categoryColor(item.category),
+                                  flexShrink: 0,
+                                }}
+                              />
+                              <span style={{ color: "var(--text-3)", fontSize: 11.5 }}>{item.category}</span>
+                            </>
+                          )}
+                          {item.deadline_history && item.deadline_history.length > 0 && (
+                            <span style={{ color: "#fbbf24", fontSize: 10.5 }}>· extended</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         ) : (
