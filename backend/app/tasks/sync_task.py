@@ -16,6 +16,7 @@ from app.services.ingestion import (
 )
 from app.utils.dedup import get_message_id
 from app.services.event_merge import find_matching_event, apply_update
+from app.services.semantic_cache import invalidate_user_cache
 from qdrant_client.http import models as qdrant_models
 
 logger = logging.getLogger("uvicorn.error")
@@ -212,7 +213,10 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         supabase_service.table("connected_accounts").update({
             "last_synced_at": datetime.utcnow().isoformat()
         }).eq("id", account_id).execute()
-        
+
+        if emails_processed > 0:
+            invalidate_user_cache(user_id)
+
         logger.info(f"Email sync completed successfully. Processed {emails_processed}, skipped {emails_skipped} (already ingested).")
         return {"status": "success", "processed": emails_processed, "skipped": emails_skipped}
         

@@ -106,3 +106,14 @@ def set_semantic_cache(user_id: str, query: str, answer: str, citations: list[di
         logger.info(f"Saved query to semantic cache: {key}")
     except Exception as e:
         logger.error(f"Failed to set semantic cache in Redis: {e}")
+
+def invalidate_user_cache(user_id: str) -> int:
+    """Delete all cached query answers for a user (call after a sync ingests new events)."""
+    try:
+        keys = redis_client.keys(f"cache:{user_id}:*")
+        if not keys:
+            return 0
+        return redis_client.delete(*keys)
+    except Exception as e:
+        logger.error(f"Failed to invalidate semantic cache for {user_id}: {e}")
+        return 0
