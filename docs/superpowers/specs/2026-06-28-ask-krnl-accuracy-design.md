@@ -14,12 +14,19 @@ the user ("both equally"):
 2. **Precision** — even for retrieved events, `query.py` builds the LLM context from only
    `display_name` + body chunk text, **dropping the structured `deadline`/`venue` fields**
    that `hybrid_retrieval` already returns. Answers are vague about exact dates/venues.
+3. **No "today" anchor** — the prompt never tells the model the current date, so relative
+   questions ("due this week", "next 7 days") are computed against dates *mentioned in the
+   emails*, not the actual present. Observed 2026-06-28: asked "what's due this week", it
+   returned a 25 June deadline (3 days past) and a 22 June session (6 days past) as
+   "upcoming", and omitted the genuinely upcoming items the inbox was showing. It cannot
+   distinguish past from future.
 
 ## Goal
 
-Make Ask KRNL reliably enumerate the same events the task view shows, and state their
-exact deadline/venue/links — without adding any extra Gemini/LLM round-trip (shared-key
-free-tier constraint).
+Make Ask KRNL reliably enumerate the same events the task view shows, state their
+exact deadline/venue/links, and reason correctly about relative time ("this week", "next
+7 days") against the actual current date — without adding any extra Gemini/LLM round-trip
+(shared-key free-tier constraint).
 
 Chosen approach: **B — always attach the structured agenda + enriched RAG.** No intent
 routing, no extra LLM call.
@@ -60,9 +67,14 @@ fields always; body text only where RAG provided it).
 - Replace the current context build. Construct the unified source set (agenda merged with
   deduped RAG), then render each numbered source with its structured block
   (deadline/venue/category/links) **plus** body text where available.
-- Tighten the system prompt: answer only from provided events; for list/deadline
-  questions **enumerate completely and never omit a listed deadline**; state exact dates
-  and venues; cite each statement with `[n]`; never hallucinate links.
+- **Inject the current date (IST) into the prompt** (e.g. "Today is YYYY-MM-DD (IST).").
+  This is what lets the model bucket "this week"/"next 7 days"/"upcoming" against the real
+  present instead of dates mentioned in emails. Compute it the same way as
+  `get_urgency_label` (today-in-IST) so Ask KRNL and the task view agree.
+- Tighten the system prompt: answer only from provided events; treat deadlines before
+  today as past (do not call them "upcoming"); for list/deadline questions **enumerate
+  completely and never omit a listed upcoming deadline**; state exact dates and venues;
+  cite each statement with `[n]`; never hallucinate links.
 - Citation extraction maps `[n] → event_id` over the unified set, so agenda-only events
   (no RAG hit) are still citable — not just RAG documents as today.
 - Empty-context fallback still applies only when both agenda and RAG are empty.
@@ -87,6 +99,10 @@ Confirm the frontend Ask KRNL renderer handles the chosen form before finalizing
 - unified merge: event in both agenda and RAG appears once with body attached; numbering
   is agenda-first.
 - citation mapping resolves an agenda-only event's `[n]` to its `event_id`.
+- the today-in-IST anchor string is present in the built prompt and matches the
+  `get_urgency_label` notion of "today".
+- `get_upcoming_agenda` excludes deadlines before the grace window (past events don't
+  enter the candidate set).
 - `invalidate_user_cache` deletes only the target user's keys.
 
 ## Out of scope
