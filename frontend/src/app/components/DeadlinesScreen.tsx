@@ -174,6 +174,17 @@ export function DeadlinesScreen() {
     }
   };
 
+  const urgencyLabel = (u?: string) => {
+    switch ((u || "").toLowerCase()) {
+      case "today": return "Today";
+      case "tomorrow": return "Tomorrow";
+      case "this_week": return "This Week";
+      case "expired": return "Overdue";
+      case "upcoming": return "Upcoming";
+      default: return u || "";
+    }
+  };
+
   // List View Filter mapping
   const filteredListDeadlines = deadlines.filter((item) => {
     const urg = item.urgency_label?.toLowerCase() || "upcoming";
@@ -332,14 +343,13 @@ export function DeadlinesScreen() {
                   key={f}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setActiveFilter(f)}
-                  className="flex items-center gap-1.5 whitespace-nowrap px-4 py-1.5 flex-shrink-0"
+                  className="whitespace-nowrap px-3.5 py-1.5 flex-shrink-0"
                   style={{
-                    borderRadius: 24,
-                    background: active ? "rgba(59,130,246,0.18)" : "transparent",
-                    border: active ? "1px solid rgba(59,130,246,0.4)" : "1px solid var(--border)",
-                    color: active ? "var(--text)" : "var(--text-3)",
+                    borderRadius: 999,
+                    background: active ? "var(--accent-weak)" : "transparent",
+                    color: active ? "var(--accent)" : "var(--text-3)",
                     fontSize: 13,
-                    fontWeight: active ? 600 : 400,
+                    fontWeight: active ? 600 : 500,
                   }}
                 >
                   {f}
@@ -395,14 +405,7 @@ export function DeadlinesScreen() {
                       <div className="flex flex-col items-center flex-shrink-0 pt-3.5">
                         <div
                           className="w-2.5 h-2.5 rounded-full z-10"
-                          style={{
-                            background: style.dotColor,
-                            boxShadow: isDone
-                              ? "0 0 8px rgba(16,185,129,0.5)"
-                              : item.urgency_label === "today" || item.urgency_label === "expired"
-                              ? "0 0 8px rgba(239,68,68,0.5)"
-                              : "none",
-                          }}
+                          style={{ background: style.dotColor }}
                         />
                       </div>
 
@@ -455,7 +458,7 @@ export function DeadlinesScreen() {
                                 borderRadius: 8,
                               }}
                             >
-                              {isDone ? "Done" : item.urgency_label}
+                              {isDone ? "Done" : urgencyLabel(item.urgency_label)}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5">
