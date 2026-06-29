@@ -26,6 +26,13 @@ at rest.
 
 ## Status at a glance
 
+- **2026-06-29 — Phase 3/4 + full debloat + PWA fixes; notifications design in progress.** See
+  [session log](docs/sessions/2026-06-29-debloat-autosync-pwa-notifications.md). Done: Phase 4 security
+  (auth + rate-limit), Phase 3 auto-sync Beat (15-min, throttle 6s), **debloat finished** (frontend
+  8,552→~3,400 ln, deps 57→4; tracker `docs/PRODUCTION_READINESS_AUDIT.md`), new icon, Settings install
+  button, **installed-PWA auth fix (PKCE + manifest scope/id)**, **deploy-safe service worker (fixed
+  black screen)**. Android PWA verified working over a dev HTTPS cloudflared tunnel (ephemeral; revert
+  per PRODUCTION_CLEANUP). **Next:** finish notifications (Web Push) design → build → **deployment**.
 - **2026-06-27 — Redesign COMPLETE + deadline/extraction/merge fixes.** See
   [session log](docs/sessions/2026-06-27-redesign-finish-deadline-fixes.md). Active branch:
   **`redesign`**; old look preserved on **`pre-redesign-backup`**. All screens redesigned
