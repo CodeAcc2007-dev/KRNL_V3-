@@ -77,11 +77,14 @@ structural finding is B7 (events.py duplication). The rest are small/behavior-to
 
 ## ⚠️ Security note (found during B4, 2026-06-29)
 
-The deleted `backend/test_connection.py` contained a **hardcoded API key**
-(`AIzaSy…`) and a hardcoded LDAP user. The file is gone from the working tree but
-**remains in git history**. If that key is real/active, **rotate it** in Google AI
-Studio. (Separately: `backend/.env` real secrets should move to host secrets before
-prod — already tracked in PRODUCTION_CLEANUP.)
+The deleted `backend/test_connection.py` contained a **hardcoded credential**
+(`AIzaSy…`, used as the IMAP login token) and a hardcoded LDAP user. Verified
+2026-06-29: this is **NOT** the active `GEMINI_API_KEY` (`.env` value `AQ.Ab8…` is a
+different key). The active key is safe — `backend/.env` is gitignored, never committed,
+and the active key string is absent from all git history. The stale hardcoded key still
+lives in history; **rotate it if it was ever a real Google API key** (low urgency — not
+the live key; likely an expired IITB SSO token). Separately: move `.env` secrets to host
+secrets before prod (tracked in PRODUCTION_CLEANUP).
 
 ## C. Verification gate (run after EVERY change batch)
 
