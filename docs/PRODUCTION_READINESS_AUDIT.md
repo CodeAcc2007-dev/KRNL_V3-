@@ -45,14 +45,15 @@ the items below are the large majority of it.
 
 | ID | Finding | Evidence | Risk to product | Action | Status |
 |----|---------|----------|-----------------|--------|--------|
-| F1 | `src/app/components/ui/` — 48 shadcn primitives (sidebar 726, chart 353, menubar, context-menu, carousel, pagination, breadcrumb, navigation-menu, command, table, …) | No app file imports any `ui/` component (grep = 0). They only import each other. | None — fully unimported; regenerable via shadcn CLI | Delete the `ui/` directory | [ ] |
-| F2 | `src/app/components/figma/ImageWithFallback.tsx` | Not imported by any app file | None | Delete | [ ] |
-| F3 | ~50 of 57 npm `dependencies` unused (MUI, @emotion/*, all @radix-ui/*, recharts, embla-carousel, react-slick, react-dnd*, react-popper/@popperjs, canvas-confetti, input-otp, cmdk, vaul, react-day-picker, react-resizable-panels, react-hook-form, next-themes, react-router, react-responsive-masonry, sonner, date-fns, cva/clsx/tailwind-merge, tw-animate-css …) | Only react/react-dom/motion/lucide/@supabase used by app code; the rest are pulled in only by the dead `ui/` folder | None **after F1** | After F1, remove deps; `npm run build` must pass; restore any the build still needs (e.g. tailwind/vite build-time) | [ ] |
+| F1 | `src/app/components/ui/` — 48 shadcn primitives | No app file imports any `ui/` component (grep = 0). | None — fully unimported; regenerable via shadcn CLI | **DONE `0d016fb`** — deleted; build OK, JS bundle byte-identical, CSS 95→27 kB | [x] |
+| F2 | `src/app/components/figma/ImageWithFallback.tsx` | Not imported by any app file | None | **DONE `0d016fb`** — deleted | [x] |
+| F3 | 53 of 57 npm `dependencies` unused (MUI, @emotion/*, all @radix-ui/*, recharts, embla-carousel, react-slick, react-dnd*, react-popper/@popperjs, canvas-confetti, input-otp, cmdk, vaul, react-day-picker, react-resizable-panels, react-hook-form, next-themes, react-router, react-responsive-masonry, sonner, date-fns, cva/clsx/tailwind-merge, @supabase/ssr …) | Pulled in only by the dead `ui/` folder | None after F1 | **DONE `3dfc7e7`** — deps 57→4 (motion, lucide-react, @supabase/supabase-js, tw-animate-css); build byte-identical. KEPT tw-animate-css (CSS @import) | [x] |
 | F4 | `src/app/lib/api.ts` is a thin wrapper that just calls `utils/api.ts` `apiFetch` + `.json()` | 10-line indirection; both `apiCall` and `apiFetch` exist | Low — used by some screens | Verify call sites, collapse to one helper if clean | [ ] |
 | F5 | 6 CSS files (`fonts, globals, index, tailwind, theme, tokens`) — possible overlap | Not yet reviewed; `tokens.css` is the live design-token source per project notes | Medium — CSS deletion can break styling | Review import chain; merge/prune only what's provably unused. **Lower priority.** | [ ] |
 | F6 | Hardcoded demo fallback lists (Deadlines ~L50-88, Inbox ~L112-139) render fake data when API fails | Already flagged in PRODUCTION_CLEANUP.md | Medium — user-visible if API fails | Replace with honest empty state before prod | [ ] |
 
-**Estimated removal from A: ~6,000+ frontend lines and ~50 dependencies, zero behavior change.**
+**Phase 1 (F1–F3) DONE 2026-06-29:** removed 5,137 lines + 53 deps, build verified byte-identical.
+Remaining in A: F4 (api helper), F5 (CSS, low priority), F6 (demo fallbacks — behavior change, do deliberately).
 
 ---
 
@@ -89,5 +90,9 @@ If either fails, the change is not done. Do not check the box.
   frontend (8,552 ln). Proved via import-grep that the real app imports only react/react-dom/motion/
   lucide/@supabase and that **no app file imports any `ui/` component** → headline finding F1–F3
   (delete `ui/`, figma, prune ~50 deps). Created this tracker. Backend left as PENDING deep-review
-  backlog (B1–B6). Next session: confirm F1 by deleting `ui/` on a branch + `npm run build`, then F3
-  dependency prune.
+  backlog (B1–B6).
+- **2026-06-29 (Phase 1 execution):** Did F1+F2+F3. Deleted `ui/` (48) + figma helper → `0d016fb`
+  (5,137 deletions; build OK, JS byte-identical, CSS 95→27 kB). Pruned deps 57→4 → `3dfc7e7`
+  (byte-identical build). Gate (`npm run build`) green throughout; no behavior change. **Next:** F4
+  (collapse `lib/api.ts`/`utils/api.ts`), then backend deep-read (B5) — read events.py, sync_task.py,
+  ingestion.py, retrieval.py for dead code; F6 + B1–B3 are behavior-touching, do deliberately with TDD.
