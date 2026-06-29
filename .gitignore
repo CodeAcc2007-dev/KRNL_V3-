@@ -13,6 +13,10 @@
 **/*.pyo
 **/*.pyd
 **/.pytest_cache/
+
+# Celery Beat runtime schedule (created by `worker -B`)
+**/celerybeat-schedule
+**/celerybeat-schedule-*
 **/.venv/
 **/venv/
 **/env/
