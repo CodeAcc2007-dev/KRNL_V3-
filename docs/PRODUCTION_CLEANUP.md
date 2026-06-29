@@ -32,10 +32,11 @@ Columns: **what · where · why it exists · action before prod.**
 
 | What | Where | Why | Action before prod |
 |---|---|---|---|
-| `/sync/status` has no auth | `sync.py` `get_sync_status` | left open | Add `Depends(get_current_user)` |
-| CORS | `backend/app/main.py` | permissive in dev | Lock to real frontend origin |
-| `TEMP_ACCESS_TOKEN` | core/security (if present) | dev convenience | Remove |
-| Secrets in `.env` | `backend/.env` | local dev | Move to host secrets; never commit |
+| ~~`/sync/status` has no auth~~ | `sync.py` `get_sync_status` | left open | ✅ DONE 2026-06-29 — `Depends(get_current_user)` added |
+| `/sync/trigger` rate-limit | `sync.py` + `app/core/rate_limit.py` | abuse/runaway-cost guard | ✅ DONE 2026-06-29 — 1/user/min Redis fixed-window, fail-open |
+| `TEMP_ACCESS_TOKEN` | core/security (if present) | dev convenience | N/A — does not exist in `backend/app` (no-op) |
+| CORS | `backend/app/main.py` | permissive in dev | Lock to real frontend origin (deploy-time `.env`) |
+| Secrets in `.env` | `backend/.env` | local dev | Move to host secrets; never commit (deploy-time) |
 
 ## Mock / placeholder data
 

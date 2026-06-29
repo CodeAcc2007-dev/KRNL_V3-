@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.security import get_current_user, supabase
 from app.core.celery_app import celery_app
+from app.core.rate_limit import allow_request
 from app.tasks.sync_task import run_email_sync
 from celery.result import AsyncResult
 from typing import List, Dict, Any
@@ -17,6 +18,14 @@ def trigger_sync(current_user: dict = Depends(get_current_user)) -> Dict[str, An
     synchronous execution.
     """
     user_id = current_user["user_id"]
+
+    # One trigger per user per minute — each fans out real IMAP + throttled Gemini work.
+    if not allow_request(f"ratelimit:sync:{user_id}", limit=1, window_seconds=60):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="A sync was just triggered. Please wait a moment before syncing again."
+        )
+
     try:
         # Fetch connected accounts for user
         response = supabase.table("connected_accounts").select("*").eq("user_id", user_id).execute()
@@ -64,7 +73,9 @@ def trigger_sync(current_user: dict = Depends(get_current_user)) -> Dict[str, An
     }
 
 @router.get("/sync/status/{task_id}")
-def get_sync_status(task_id: str) -> Dict[str, Any]:
+def get_sync_status(
+    task_id: str, current_user: dict = Depends(get_current_user)
+) -> Dict[str, Any]:
     """
     Returns the task execution state (PENDING, STARTED, SUCCESS, FAILURE, etc.).
     """
