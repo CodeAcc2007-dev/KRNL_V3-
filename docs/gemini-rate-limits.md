@@ -6,6 +6,24 @@ no billing needed. 500/day comfortably covers a 10-15 user pilot at ~10 emails/u
 Ask KRNL usage. The analysis below is kept for historical context on why the old model was a
 hard wall.
 
+**flash-lite limits (confirmed 2026-06-29): RPM = 15, RPD = 500** (embeddings unchanged:
+100 RPM / 1000 RPD, separate quota). RPD is the binding cap; RPM only paces a burst.
+
+**Auto-sync pilot tuning (Phase 3, derived 2026-06-29):** poll **every 15 min**, `concurrency=1`,
+`sleep` lowered **13s → 6s**. Cap policy: **incremental** cycles drain everything new since
+`last_synced_at` (no fixed cap — 15-min accumulation is tiny, keeps each batch small so the single
+worker stays responsive); only the **first/cold-start sync** (no `last_synced_at`) is bounded
+(~30 newest) as a circuit-breaker — a brand-new account's full-mailbox backlog could otherwise drain
+the shared 500 RPD for all users and hog the single worker for ~1h.
+
+Rationale: poll frequency does NOT affect daily usage (message_id dedup → each email costs 1 Flash
+call once, regardless of cadence), so frequency is a free latency knob; RPM is self-capped by the
+sleep, not the per-cycle cap. `sleep=6s` paces the worker at ~10 calls/min, leaving ~5 of the 15 RPM
+for live Ask KRNL queries (which fire in the request path, NOT paced by the worker sleep). Going
+below 6s buys nothing — RPD binds, not RPM. Scale path: enable billing (RPD jumps) → drop sleep +
+interval; past ~45 users raise concurrency >1 but only with the ADR-0001 Redis rate-gate (sleep
+doesn't coordinate across worker processes).
+
 _Source: Google AI Studio dashboard, project "KRNL Production", observed 2026-06-23
 (free tier, billing NOT enabled). These are the hard numbers everything else must respect._
 

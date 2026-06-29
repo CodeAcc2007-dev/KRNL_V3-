@@ -16,7 +16,7 @@ Columns: **what · where · why it exists · action before prod.**
 | Local Redis compose | `docker-compose.yml` | local broker for dev/testing | Prod uses managed Redis via `REDIS_URL`; compose is dev-only |
 | Qdrant health-check | `backend/scripts/qdrant_healthcheck.py` | diagnostic | Keep as ops tool, not on a request path |
 | Email-date backfill | `backend/scripts/backfill_email_date.py` | one-time fill of email_date for pre-migration rows | Keep as ops tool, not on a request path |
-| Celery worker run cmd | manual: `celery -A app.core.celery_app worker --concurrency=1` | dev/testing worker | Prod runs the worker as a managed process |
+| Celery worker run cmd | manual: `celery -A app.core.celery_app worker --concurrency=1 -B` | dev/testing worker **+ embedded Beat** (`-B`) — REQUIRED for auto-sync + deletion schedules to fire; without it neither periodic task runs | Prod runs worker + beat as managed processes (beat may be a separate process) |
 
 ## Dev-only fallbacks & temp values
 

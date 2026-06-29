@@ -24,6 +24,10 @@ celery_app.conf.beat_schedule = {
         'task': 'app.tasks.deletion_task.check_and_execute_matured_deletions',
         'schedule': 3600.0,  # hourly (in seconds)
     },
+    'auto-sync-connected-accounts': {
+        'task': 'app.tasks.sync_task.dispatch_all_syncs',
+        'schedule': 900.0,  # every 15 minutes
+    },
 }
 
 # Autodiscover tasks from 'app.tasks'

@@ -95,8 +95,8 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 # Throttle BETWEEN processed emails to pace the shared Gemini key.
                 # Skipped dups don't sleep, and there's no sleep before the first one.
                 if emails_processed > 0:
-                    logger.info("Sleeping 13 seconds between iterations...")
-                    time.sleep(13)
+                    logger.info("Sleeping 6 seconds between iterations...")
+                    time.sleep(6)
 
                 subject = msg.subject or "No Subject"
                 sender = msg.from_ or "Unknown Sender"
@@ -226,3 +226,28 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         if not getattr(self, "request", None) or getattr(self.request, "called_directly", True):
             raise exc
         raise self.retry(exc=exc, countdown=60)
+
+
+@celery_app.task(name="app.tasks.sync_task.dispatch_all_syncs")
+def dispatch_all_syncs():
+    """Beat task: enqueue an incremental sync for every connected account.
+
+    Runs every 15 min. Each enqueued run is paced by the single worker, and
+    run_email_sync's per-run cap spreads any large backlog (e.g. a freshly
+    connected account) across cycles, so one onboarding can't exhaust the
+    shared daily Gemini budget in a single cycle.
+    """
+    try:
+        resp = supabase_service.table("connected_accounts").select(
+            "id, user_id"
+        ).eq("connection_status", "connected").execute()
+    except Exception as e:
+        logger.error(f"Auto-sync dispatch failed to query accounts: {e}")
+        return {"status": "error", "dispatched": 0}
+
+    accounts = resp.data or []
+    for acc in accounts:
+        run_email_sync.delay(acc["user_id"], acc["id"])
+
+    logger.info(f"Auto-sync dispatched {len(accounts)} account sync(s).")
+    return {"status": "success", "dispatched": len(accounts)}
