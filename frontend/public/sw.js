@@ -1,75 +1,66 @@
-const CACHE_NAME = "krnl-cache-v1";
-const ASSETS_TO_CACHE = [
+// Deploy-safe service worker.
+// Navigation requests (index.html) are network-first so a new build's HTML —
+// and therefore its hashed asset references — is always current; the cache is
+// only a fallback when offline. Hashed static assets are cache-first (their
+// filenames change every build, so cached copies never go stale). Bumping
+// CACHE_NAME purges older caches on activate.
+const CACHE_NAME = "krnl-cache-v2";
+const PRECACHE = [
   "/",
-  "/index.html",
   "/manifest.json",
-  "/src/main.tsx",
-  "/src/styles/theme.css",
-  "/src/styles/fonts.css",
-  "/src/styles/globals.css",
   "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png"
+  "/icons/icon-512x512.png",
 ];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE).catch((err) => {
-        console.warn("[Service Worker] Some assets failed to cache during install:", err);
-      });
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE).catch(() => {}))
   );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    caches
+      .keys()
+      .then((names) =>
+        Promise.all(names.map((n) => (n !== CACHE_NAME ? caches.delete(n) : undefined)))
+      )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  // Only handle local HTTP/S requests
-  if (!event.request.url.startsWith(self.location.origin)) {
+  const req = event.request;
+  if (!req.url.startsWith(self.location.origin)) return;
+  if (req.method !== "GET" || req.url.includes("/api/v1/")) return;
+
+  // Navigation: network-first, fall back to cached shell only when offline.
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put("/", copy));
+          return res;
+        })
+        .catch(() => caches.match("/").then((r) => r || caches.match("/index.html")))
+    );
     return;
   }
 
-  // Avoid caching POST requests or API calls
-  if (event.request.method !== "GET" || event.request.url.includes("/api/v1/")) {
-    return;
-  }
-
+  // Static assets (hashed filenames): cache-first, populate on first fetch.
   event.respondWith(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.match(event.request).then((cachedResponse) => {
-        const fetchPromise = fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              cache.put(event.request, networkResponse.clone());
-            }
-            return networkResponse;
-          })
-          .catch((err) => {
-            console.log("[Service Worker] Network request failed, using offline cache fallback:", err);
-            // If completely offline and navigating, return index.html
-            if (event.request.mode === "navigate") {
-              return cache.match("/index.html");
-            }
-            return cachedResponse;
-          });
-
-        // Stale-While-Revalidate: return cache instantly if available, fetch updates in background
-        return cachedResponse || fetchPromise;
-      });
-    })
+    caches.match(req).then(
+      (cached) =>
+        cached ||
+        fetch(req).then((res) => {
+          if (res && res.status === 200) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+    )
   );
 });
