@@ -6,7 +6,9 @@ import { DeadlinesScreen } from "./components/DeadlinesScreen";
 import { AskKrnlScreen } from "./components/AskKrnlScreen";
 import { SettingsScreen } from "./components/SettingsScreen";
 import { LoginScreen } from "./components/LoginScreen";
+import { OnboardingInterests } from "./components/OnboardingInterests";
 import { supabase } from "./utils/supabase";
+import { apiFetch } from "./utils/api";
 import { Session } from "@supabase/supabase-js";
 
 type Screen = "inbox" | "deadlines" | "ask" | "settings";
@@ -25,6 +27,8 @@ export default function App() {
   const [oauthError, setOauthError] = useState<string | null>(null);
   const [activeScreen, setActiveScreen] = useState<Screen>("inbox");
   const [direction, setDirection] = useState(0);
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // PWA Display & Installer Promos
   const [isMobileOrStandalone, setIsMobileOrStandalone] = useState(false);
@@ -89,6 +93,21 @@ export default function App() {
       window.removeEventListener("appinstalled", handleAppInstalled);
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) {
+      setOnboardingChecked(false);
+      setNeedsOnboarding(false);
+      return;
+    }
+    apiFetch("/api/v1/profile")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((prof) => {
+        setNeedsOnboarding(!!prof && (prof.interest_slugs || []).length === 0);
+      })
+      .catch((err) => console.error("Error checking onboarding:", err))
+      .finally(() => setOnboardingChecked(true));
+  }, [session]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -167,6 +186,8 @@ export default function App() {
           </div>
         ) : !session ? (
           <LoginScreen oauthError={oauthError} />
+        ) : onboardingChecked && needsOnboarding ? (
+          <OnboardingInterests onDone={() => setNeedsOnboarding(false)} />
         ) : (
           <>
             {/* Status bar notch area (Desktop frame only) */}
