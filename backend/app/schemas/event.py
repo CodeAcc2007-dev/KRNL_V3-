@@ -9,6 +9,7 @@ class EventResponse(BaseModel):
     venue: Optional[str] = None
     category: Optional[str] = None
     tags: Any = None  # Can be array/list or string depending on DB serialization
+    interest_tags: Any = None
     importance_score: float
     raw_summary: Optional[str] = None
     full_body: Optional[str] = None

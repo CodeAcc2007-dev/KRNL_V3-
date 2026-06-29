@@ -22,24 +22,36 @@ def parse_tags(tags_data) -> List[str]:
         return [t.strip() for t in tags_data.split(",") if t.strip()]
     return []
 
+IMPORTANT_THRESHOLD = 60.0
+
+
+def _grade_relevance(match_count: int) -> float:
+    """Graded interest overlap: 0 -> 0, 1 -> 60, 2+ -> 100."""
+    if match_count <= 0:
+        return 0.0
+    if match_count == 1:
+        return 60.0
+    return 100.0
+
+
 def calculate_priority(event: dict, user_interests: List[str]) -> float:
     """
-    Calculates the personalized priority score (0-100) for an event.
-    Base score starts at importance_score (scaled to 100 if between 0 and 1).
-    Boosts by +20 if any tag matches user interests. Caps at 100.
+    Personalized priority (0-100), relevance-led blend.
+    importance = importance_score scaled to 0-100.
+    If the user has interests: 0.4*importance + 0.6*relevance.
+    If not: importance only (graceful fallback).
     """
     importance = float(event.get("importance_score") or 0.0)
-    # If the importance score is between 0.0 and 1.0, scale to 100
-    base_score = importance * 100.0 if importance <= 1.0 else importance
-    
-    tags = parse_tags(event.get("tags"))
-    event_tags_lower = [t.lower() for t in tags]
-    
-    boost = 0
-    if any(interest.lower() in event_tags_lower for interest in user_interests):
-        boost = 20
-        
-    return min(base_score + boost, 100.0)
+    importance = importance * 100.0 if importance <= 1.0 else importance
+    importance = min(importance, 100.0)
+
+    if not user_interests:
+        return round(importance, 1)
+
+    event_slugs = {s.lower() for s in parse_tags(event.get("interest_tags"))}
+    interest_set = {s.lower() for s in user_interests}
+    relevance = _grade_relevance(len(event_slugs & interest_set))
+    return round(min(0.4 * importance + 0.6 * relevance, 100.0), 1)
 
 def get_urgency_label(deadline_str: str) -> str:
     """
@@ -82,12 +94,11 @@ def get_urgency_label(deadline_str: str) -> str:
         return "upcoming"
 
 def _get_user_interests(user_id: str) -> List[str]:
-    """Fetch the user's profile interests as a clean list; [] on any error."""
+    """Fetch the user's selected interest slugs; [] on any error."""
     try:
-        res = supabase.table("profiles").select("interests").eq("id", user_id).execute()
+        res = supabase.table("profiles").select("interest_slugs").eq("id", user_id).execute()
         if res.data:
-            interests_str = res.data[0].get("interests") or ""
-            return [i.strip() for i in interests_str.split(",") if i.strip()]
+            return parse_tags(res.data[0].get("interest_slugs"))
     except Exception:
         pass
     return []
@@ -102,6 +113,7 @@ def _to_event_response(row: dict, user_interests: List[str]) -> EventResponse:
         venue=row.get("venue"),
         category=row.get("category"),
         tags=parse_tags(row.get("tags")),
+        interest_tags=parse_tags(row.get("interest_tags")),
         importance_score=float(row.get("importance_score") or 0.0),
         raw_summary=row.get("raw_summary"),
         full_body=row.get("full_body"),

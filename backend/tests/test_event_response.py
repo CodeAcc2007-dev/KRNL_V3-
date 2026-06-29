@@ -9,6 +9,7 @@ SAMPLE_ROW = {
     "venue": "LH101",
     "category": "Technical",
     "tags": "ai, ml",
+    "interest_tags": ["hackathons"],
     "importance_score": 0.8,
     "raw_summary": "a summary",
     "full_body": "clean body",
@@ -42,13 +43,17 @@ def test_maps_core_fields_verbatim():
     assert r.urgency_label in VALID_URGENCY
 
 
-def test_interest_match_boosts_priority():
-    # importance 0.8 -> base 80; tag "ai" matches interest -> +20 boost -> 100
-    boosted = _to_event_response(SAMPLE_ROW, ["ai"])
-    assert boosted.personalized_priority == 100.0
-    # no matching interest -> base 80, no boost
-    plain = _to_event_response(SAMPLE_ROW, ["finance"])
-    assert plain.personalized_priority == 80.0
+def test_priority_uses_interest_overlap():
+    # importance 0.8 -> 80; one interest_tag match -> 0.4*80 + 0.6*60 = 68
+    matched = _to_event_response(SAMPLE_ROW, ["hackathons"])
+    assert matched.personalized_priority == 68.0
+    # interests set but no overlap -> 0.4*80 = 32
+    miss = _to_event_response(SAMPLE_ROW, ["finance"])
+    assert miss.personalized_priority == 32.0
+    # no interests selected -> importance only -> 80
+    none = _to_event_response(SAMPLE_ROW, [])
+    assert none.personalized_priority == 80.0
+    assert matched.interest_tags == ["hackathons"]
 
 
 def test_defaults_optional_fields():
