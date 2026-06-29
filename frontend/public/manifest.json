@@ -1,7 +1,9 @@
 {
   "name": "KRNL Campus Portal",
   "short_name": "KRNL",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#08090a",
   "theme_color": "#08090a",
