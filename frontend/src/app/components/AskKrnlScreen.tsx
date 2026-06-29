@@ -32,7 +32,7 @@ function renderAIText(text: string) {
   return text.split("\n").map((line, i) => {
     const parts = line.split(/(\*\*[^*]+\*\*|[¹²³⁰⁴-⁹]+)/g);
     return (
-      <p key={i} style={{ margin: "2px 0", fontSize: 14, lineHeight: 1.6 }}>
+      <p key={i} style={{ margin: "2px 0", fontSize: 14, lineHeight: 1.6, overflowWrap: "anywhere" }}>
         {parts.map((part, j) => {
           if (part.startsWith("**") && part.endsWith("**")) {
             return (
