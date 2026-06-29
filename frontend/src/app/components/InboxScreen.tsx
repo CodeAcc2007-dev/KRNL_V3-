@@ -195,8 +195,8 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
       return true;
     }
     if (tabLower === "important") {
-      // Show high importance or high priority items
-      return ev.personalized_priority && ev.personalized_priority >= 70;
+      // Mail the priority score marks important (shared threshold with notifications)
+      return ev.personalized_priority && ev.personalized_priority >= 60;
     }
     const cats = tabCategories[tabLower] || [tabLower];
     return ev.category && cats.includes(ev.category.toLowerCase());
