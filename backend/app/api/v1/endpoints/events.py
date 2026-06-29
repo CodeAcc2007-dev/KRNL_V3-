@@ -81,6 +81,43 @@ def get_urgency_label(deadline_str: str) -> str:
     else:
         return "upcoming"
 
+def _get_user_interests(user_id: str) -> List[str]:
+    """Fetch the user's profile interests as a clean list; [] on any error."""
+    try:
+        res = supabase.table("profiles").select("interests").eq("id", user_id).execute()
+        if res.data:
+            interests_str = res.data[0].get("interests") or ""
+            return [i.strip() for i in interests_str.split(",") if i.strip()]
+    except Exception:
+        pass
+    return []
+
+def _to_event_response(row: dict, user_interests: List[str]) -> EventResponse:
+    """Map a DB events row to EventResponse (shared by all event endpoints)."""
+    return EventResponse(
+        id=row.get("id"),
+        user_id=row.get("user_id"),
+        display_name=row.get("display_name"),
+        deadline=row.get("deadline"),
+        venue=row.get("venue"),
+        category=row.get("category"),
+        tags=parse_tags(row.get("tags")),
+        importance_score=float(row.get("importance_score") or 0.0),
+        raw_summary=row.get("raw_summary"),
+        full_body=row.get("full_body"),
+        raw_body=row.get("raw_body"),
+        links=row.get("links"),
+        has_registration=row.get("has_registration"),
+        registration_link=row.get("registration_link"),
+        created_at=row.get("created_at"),
+        updated_at=row.get("updated_at"),
+        personalized_priority=calculate_priority(row, user_interests),
+        urgency_label=get_urgency_label(row.get("deadline")),
+        deadline_history=row.get("deadline_history") or [],
+        last_update_type=row.get("last_update_type"),
+        email_date=row.get("email_date"),
+    )
+
 @router.get("/events", response_model=List[EventResponse])
 def get_events(current_user: dict = Depends(get_current_user)):
     """
@@ -88,19 +125,9 @@ def get_events(current_user: dict = Depends(get_current_user)):
     and return sorted by priority descending.
     """
     user_id = current_user["user_id"]
-    
-    # 1. Fetch user's profile interests
-    user_interests = []
-    try:
-        profile_res = supabase.table("profiles").select("interests").eq("id", user_id).execute()
-        if profile_res.data:
-            interests_str = profile_res.data[0].get("interests") or ""
-            user_interests = [i.strip() for i in interests_str.split(",") if i.strip()]
-    except Exception as e:
-        # Gracefully handle database/profile read errors
-        user_interests = []
-        
-    # 2. Fetch events
+
+    user_interests = _get_user_interests(user_id)
+
     try:
         events_res = supabase.table("events").select("*").eq("user_id", user_id).execute()
     except Exception as e:
@@ -108,36 +135,8 @@ def get_events(current_user: dict = Depends(get_current_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error: {str(e)}"
         )
-        
-    events_list = []
-    for row in events_res.data:
-        priority = calculate_priority(row, user_interests)
-        urgency = get_urgency_label(row.get("deadline"))
-        
-        events_list.append(EventResponse(
-            id=row.get("id"),
-            user_id=row.get("user_id"),
-            display_name=row.get("display_name"),
-            deadline=row.get("deadline"),
-            venue=row.get("venue"),
-            category=row.get("category"),
-            tags=parse_tags(row.get("tags")),
-            importance_score=float(row.get("importance_score") or 0.0),
-            raw_summary=row.get("raw_summary"),
-            full_body=row.get("full_body"),
-            raw_body=row.get("raw_body"),
-            links=row.get("links"),
-            has_registration=row.get("has_registration"),
-            registration_link=row.get("registration_link"),
-            created_at=row.get("created_at"),
-            updated_at=row.get("updated_at"),
-            personalized_priority=priority,
-            urgency_label=urgency,
-            deadline_history=row.get("deadline_history") or [],
-            last_update_type=row.get("last_update_type"),
-            email_date=row.get("email_date"),
-        ))
-        
+
+    events_list = [_to_event_response(row, user_interests) for row in events_res.data]
     # Sort by latest email first (email_date), falling back to ingest time.
     events_list.sort(key=lambda e: e.email_date or e.created_at or "", reverse=True)
     return events_list
@@ -157,50 +156,13 @@ def get_deadlines(current_user: dict = Depends(get_current_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Database error: {str(e)}"
         )
-        
-    # Get user profile interests for priority calculation
-    user_interests = []
-    try:
-        profile_res = supabase.table("profiles").select("interests").eq("id", user_id).execute()
-        if profile_res.data:
-            interests_str = profile_res.data[0].get("interests") or ""
-            user_interests = [i.strip() for i in interests_str.split(",") if i.strip()]
-    except Exception:
-        pass
-        
-    deadlines_list = []
-    for row in events_res.data:
-        deadline_str = row.get("deadline")
-        if not deadline_str:
-            continue
-            
-        priority = calculate_priority(row, user_interests)
-        urgency = get_urgency_label(deadline_str)
-        
-        deadlines_list.append(EventResponse(
-            id=row.get("id"),
-            user_id=row.get("user_id"),
-            display_name=row.get("display_name"),
-            deadline=deadline_str,
-            venue=row.get("venue"),
-            category=row.get("category"),
-            tags=parse_tags(row.get("tags")),
-            importance_score=float(row.get("importance_score") or 0.0),
-            raw_summary=row.get("raw_summary"),
-            full_body=row.get("full_body"),
-            raw_body=row.get("raw_body"),
-            links=row.get("links"),
-            has_registration=row.get("has_registration"),
-            registration_link=row.get("registration_link"),
-            created_at=row.get("created_at"),
-            updated_at=row.get("updated_at"),
-            personalized_priority=priority,
-            urgency_label=urgency,
-            deadline_history=row.get("deadline_history") or [],
-            last_update_type=row.get("last_update_type"),
-            email_date=row.get("email_date"),
-        ))
-        
+
+    user_interests = _get_user_interests(user_id)
+    deadlines_list = [
+        _to_event_response(row, user_interests)
+        for row in events_res.data
+        if row.get("deadline")
+    ]
     # Sort chronologically by deadline ascending
     deadlines_list.sort(key=lambda e: e.deadline or "")
     return deadlines_list
@@ -226,40 +188,4 @@ def get_event_detail(id: int, current_user: dict = Depends(get_current_user)):
         )
         
     row = res.data[0]
-    
-    # Calculate single item priorities
-    user_interests = []
-    try:
-        profile_res = supabase.table("profiles").select("interests").eq("id", user_id).execute()
-        if profile_res.data:
-            interests_str = profile_res.data[0].get("interests") or ""
-            user_interests = [i.strip() for i in interests_str.split(",") if i.strip()]
-    except Exception:
-        pass
-        
-    priority = calculate_priority(row, user_interests)
-    urgency = get_urgency_label(row.get("deadline"))
-    
-    return EventResponse(
-        id=row.get("id"),
-        user_id=row.get("user_id"),
-        display_name=row.get("display_name"),
-        deadline=row.get("deadline"),
-        venue=row.get("venue"),
-        category=row.get("category"),
-        tags=parse_tags(row.get("tags")),
-        importance_score=float(row.get("importance_score") or 0.0),
-        raw_summary=row.get("raw_summary"),
-        full_body=row.get("full_body"),
-        raw_body=row.get("raw_body"),
-        links=row.get("links"),
-        has_registration=row.get("has_registration"),
-        registration_link=row.get("registration_link"),
-        created_at=row.get("created_at"),
-        updated_at=row.get("updated_at"),
-        personalized_priority=priority,
-        urgency_label=urgency,
-        deadline_history=row.get("deadline_history") or [],
-        last_update_type=row.get("last_update_type"),
-        email_date=row.get("email_date"),
-    )
+    return _to_event_response(row, _get_user_interests(user_id))
