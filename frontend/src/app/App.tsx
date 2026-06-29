@@ -287,7 +287,9 @@ export default function App() {
                   )}
                   {activeScreen === "deadlines" && <DeadlinesScreen />}
                   {activeScreen === "ask" && <AskKrnlScreen />}
-                  {activeScreen === "settings" && <SettingsScreen />}
+                  {activeScreen === "settings" && (
+                    <SettingsScreen canInstall={!!deferredPrompt} onInstall={handleInstallClick} />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Mail, AlertTriangle, Shield, Check, LogOut, Trash2, Loader2 } from "lucide-react";
+import { Plus, Mail, AlertTriangle, Shield, Check, LogOut, Trash2, Loader2, Download } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
@@ -48,7 +48,7 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function SettingsScreen() {
+export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?: boolean; onInstall?: () => void } = {}) {
   const [selectedTracks, setSelectedTracks] = useState<string[]>(["Software", "Research"]);
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
@@ -480,6 +480,25 @@ export function SettingsScreen() {
             </div>
           </div>
         </div>
+
+        {/* ─── App (install) ─── */}
+        {canInstall && (
+          <div className="mb-6">
+            <span style={sectionLabel} className="block mb-2.5">App</span>
+            <div style={groupCard}>
+              <button
+                onClick={onInstall}
+                className="flex items-center justify-between px-4 py-3 w-full text-left"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Download size={16} style={{ color: "var(--accent)" }} />
+                  <span style={{ color: "var(--text)", fontSize: 14 }}>Install KRNL</span>
+                </div>
+                <span style={{ color: "var(--text-3)", fontSize: 13 }}>Add to home screen</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ─── System ─── */}
         <div className="mb-6">
