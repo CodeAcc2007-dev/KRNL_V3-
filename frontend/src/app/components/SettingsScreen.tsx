@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
 
-const tracks = ["Software", "Quant", "Research", "Core", "Design", "Finance"];
-
 // Relative "x ago" label from an ISO timestamp.
 function agoLabel(ts?: string | null) {
   if (!ts) return "never";
@@ -49,7 +47,8 @@ function GoogleIcon({ size = 20 }: { size?: number }) {
 }
 
 export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?: boolean; onInstall?: () => void } = {}) {
-  const [selectedTracks, setSelectedTracks] = useState<string[]>(["Software", "Research"]);
+  const [catalog, setCatalog] = useState<{ slug: string; label: string }[]>([]);
+  const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -99,6 +98,22 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
     }
   };
 
+  const loadInterests = async () => {
+    try {
+      const [catRes, profRes] = await Promise.all([
+        apiFetch("/api/v1/interests/catalog"),
+        apiFetch("/api/v1/profile"),
+      ]);
+      if (catRes.ok) setCatalog(await catRes.json());
+      if (profRes.ok) {
+        const prof = await profRes.json();
+        setSelectedSlugs(prof.interest_slugs || []);
+      }
+    } catch (err) {
+      console.error("Error loading interests:", err);
+    }
+  };
+
   const checkDeletionStatus = async () => {
     try {
       const res = await apiFetch("/api/v1/user/delete-request");
@@ -123,6 +138,7 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
         setEmail(session.user.email || null);
         checkDeletionStatus();
         fetchAccounts();
+        loadInterests();
       }
     });
 
@@ -227,10 +243,19 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
     }
   };
 
-  const toggleTrack = (track: string) => {
-    setSelectedTracks((prev) =>
-      prev.includes(track) ? prev.filter((t) => t !== track) : [...prev, track]
-    );
+  const toggleInterest = async (slug: string) => {
+    const next = selectedSlugs.includes(slug)
+      ? selectedSlugs.filter((s) => s !== slug)
+      : [...selectedSlugs, slug];
+    setSelectedSlugs(next);
+    try {
+      await apiFetch("/api/v1/profile", {
+        method: "POST",
+        body: JSON.stringify({ interest_slugs: next }),
+      });
+    } catch (err) {
+      console.error("Error saving interests:", err);
+    }
   };
 
   const handleDeleteAccount = async (accountId: number) => {
@@ -448,21 +473,21 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
           </div>
         </div>
 
-        {/* ─── Career Track ─── */}
+        {/* ─── Interests ─── */}
         <div className="mb-6">
-          <span style={sectionLabel} className="block mb-2.5">Career Track</span>
+          <span style={sectionLabel} className="block mb-2.5">Interests</span>
           <div style={{ ...groupCard, padding: 16 }}>
             <p style={{ color: "var(--text-3)", fontSize: 12, marginBottom: 12, lineHeight: 1.5 }}>
-              Surfaces relevant opportunities and filters emails based on your selected tracks.
+              Pick what you care about. KRNL surfaces matching mail higher and into your Important tab.
             </p>
             <div className="flex flex-wrap gap-2">
-              {tracks.map((track) => {
-                const active = selectedTracks.includes(track);
+              {catalog.map((item) => {
+                const active = selectedSlugs.includes(item.slug);
                 return (
                   <motion.button
-                    key={track}
+                    key={item.slug}
                     whileTap={{ scale: 0.93 }}
-                    onClick={() => toggleTrack(track)}
+                    onClick={() => toggleInterest(item.slug)}
                     className="px-3.5 py-1.5"
                     style={{
                       borderRadius: 9,
@@ -473,7 +498,7 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
                       fontWeight: active ? 600 : 400,
                     }}
                   >
-                    {track}
+                    {item.label}
                   </motion.button>
                 );
               })}
