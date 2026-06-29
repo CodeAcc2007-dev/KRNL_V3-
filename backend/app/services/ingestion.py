@@ -139,7 +139,7 @@ def extract_event_intelligence(subject: str, body: str, msg_date: str,
             "tags": [],
             "interest_tags": [],
             "importance_score": 0.1,
-            "raw_summary": "Failed to run AI feature extraction on this email.",
+            "raw_summary": "Could not extract details from this email.",
             "links": [],
             "is_update": False,
             "update_type": None

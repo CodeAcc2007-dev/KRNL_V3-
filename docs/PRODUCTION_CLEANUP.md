@@ -85,6 +85,6 @@ Catalog-backed interests + relevance-led priority. Spec/plan in `docs/superpower
 |---|---|---|---|
 | **Manual migration REQUIRED** | `backend/migrations/interests_priority_migration.sql` | creates `interest_catalog` (+11 seed rows) and adds `events.interest_tags` / `profiles.interest_slugs` | **Run in Supabase SQL Editor before this feature works in any environment.** Until applied: catalog endpoint returns `[]`, extraction stores no interest_tags, priority falls back to importance-only (safe, no crash) |
 | `toggleInterest` POST not checking `res.ok` | `SettingsScreen.tsx` (+ same pattern in `OnboardingInterests.tsx`) | optimistic save; brief-prescribed try/catch only | Hardening pass: check `res.ok`, revert/notify on failure (low risk — self-corrects on next mount) |
-| Pre-existing AI-reference string | `backend/app/services/ingestion.py` extraction fallback `raw_summary` ("Failed to run AI feature extraction on this email.") | predates this work; violates no-AI-refs rule | Reword (e.g. "Could not extract details from this email.") — no test asserts this string |
+| ~~Pre-existing AI-reference string~~ | `backend/app/services/ingestion.py` extraction fallback `raw_summary` | violated no-AI-refs rule | ✅ DONE 2026-06-30 — reworded to "Could not extract details from this email." |
 
 _Add new rows here as work proceeds._
