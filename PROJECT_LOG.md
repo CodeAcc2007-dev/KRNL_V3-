@@ -26,6 +26,17 @@ at rest.
 
 ## Status at a glance
 
+- **2026-06-30 — Interests & priority redesign SHIPPED (branch `redesign`, subagent-driven).**
+  Spec + plan in [docs/superpowers/](docs/superpowers/). DB-backed `interest_catalog` (11 seed fields)
+  feeds both extraction and a new Settings/onboarding multi-select; extraction tags each email
+  (`events.interest_tags`); `calculate_priority` is now a relevance-led blend
+  (`0.4·importance + 0.6·relevance`, importance-only fallback) with shared `IMPORTANT_THRESHOLD=60`
+  driving the Important tab (and future notifications). **Action needed:** run
+  [interests_priority_migration.sql](backend/migrations/interests_priority_migration.sql) in Supabase
+  (catalog table + `interest_tags`/`interest_slugs` columns) — until then the feature degrades safely
+  (priority falls back to importance-only). Deferred (see PRODUCTION_CLEANUP): `res.ok` hardening on the
+  interest-save POST; rewording a pre-existing AI-reference fallback string. Notifications design is
+  parked behind this (triggers/threshold now read the new priority). **Next:** apply migration → notifications → deploy.
 - **2026-06-29 — Phase 3/4 + full debloat + PWA fixes; notifications design in progress.** See
   [session log](docs/sessions/2026-06-29-debloat-autosync-pwa-notifications.md). Done: Phase 4 security
   (auth + rate-limit), Phase 3 auto-sync Beat (15-min, throttle 6s), **debloat finished** (frontend

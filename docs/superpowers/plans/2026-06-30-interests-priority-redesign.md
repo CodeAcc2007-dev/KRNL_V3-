@@ -283,8 +283,8 @@ def test_interests_set_but_no_overlap():
 
 
 def test_already_scaled_importance_and_cap():
-    # importance stored as 0-100 int; 2+ matches -> cap at 100
-    assert calculate_priority(_ev(95, ["a", "b"]), ["a", "b"]) == 100.0
+    # importance stored as 0-100 int; 2+ matches -> 0.4*100 + 0.6*100 = 100.0
+    assert calculate_priority(_ev(100, ["a", "b"]), ["a", "b"]) == 100.0
 
 
 def test_threshold_constant_is_60():
