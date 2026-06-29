@@ -17,7 +17,8 @@ at rest.
 | Sync flow + performance analysis | [docs/sync-flow.md](docs/sync-flow.md), [docs/sync-performance.md](docs/sync-performance.md) |
 | **Gemini rate limits & capacity** | [docs/gemini-rate-limits.md](docs/gemini-rate-limits.md) |
 | Session logs (dated context/ref) | [docs/sessions/](docs/sessions/) |
-| Production-cleanup tracker | [docs/PRODUCTION_CLEANUP.md](docs/PRODUCTION_CLEANUP.md) |
+| Production-cleanup tracker (dev scaffolding to remove) | [docs/PRODUCTION_CLEANUP.md](docs/PRODUCTION_CLEANUP.md) |
+| **Debloat / production-readiness audit (cross-session, YAGNI)** | [docs/PRODUCTION_READINESS_AUDIT.md](docs/PRODUCTION_READINESS_AUDIT.md) |
 | UI audit | [docs/audit/](docs/audit/) |
 | DB migrations (run manually in Supabase SQL Editor) | [backend/migrations/](backend/migrations/) |
 | Ops scripts | [backend/scripts/](backend/scripts/) |
