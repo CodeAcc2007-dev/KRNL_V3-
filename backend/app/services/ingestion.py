@@ -27,6 +27,7 @@ class EmailExtractionModel(BaseModel):
     category: Optional[str] = Field(description="Event category classification (e.g. Academic, Career, Cultural, Technical, General)")
     venue: Optional[str] = Field(description="Event location or venue, or null/None if not specified")
     tags: List[str] = Field(default_factory=list, description="Array of relevant keywords or tags")
+    interest_tags: List[str] = Field(default_factory=list, description="Subset of the provided interest field list that this email is relevant to; empty if none apply")
     importance_score: float = Field(description="Calculated importance score from 0.0 (low priority) to 1.0 (critical priority)")
     raw_summary: str = Field(description="Brief 2-3 sentence summary of the email context and its requirements")
     links: List[str] = Field(default_factory=list, description="Array of registration, document, or reference URLs extracted from the email body")
@@ -65,6 +66,15 @@ def init_qdrant_collection():
 # Initialize Qdrant DB collection
 init_qdrant_collection()
 
+def normalize_interest_tags(raw_tags, catalog_lookup: dict) -> list:
+    """Map model-returned labels/slugs to canonical catalog slugs; dedup; drop unknowns."""
+    out = []
+    for t in raw_tags or []:
+        slug = catalog_lookup.get(str(t).strip().lower())
+        if slug and slug not in out:
+            out.append(slug)
+    return out
+
 def clean_email_body(raw_body: str) -> str:
     """
     Cleans raw HTML email body by removing script/style tags and raw tags.
@@ -83,11 +93,19 @@ def clean_email_body(raw_body: str) -> str:
     lines = [line.strip() for line in clean.splitlines() if line.strip()]
     return "\n".join(lines)
 
-def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
+def extract_event_intelligence(subject: str, body: str, msg_date: str,
+                               interest_labels: Optional[List[str]] = None) -> dict:
     """
     Structured event details extraction.
     """
     clean_body = clean_email_body(body)
+    interest_line = ""
+    if interest_labels:
+        interest_line = (
+            "From this list of interest fields, set interest_tags to the ones this email "
+            f"is genuinely relevant to (use the exact names, omit if none apply): "
+            f"{', '.join(interest_labels)}.\n\n"
+        )
     prompt = (
         "Analyze the email Subject and Body provided below. Extract the key metadata "
         "and details in structured JSON format according to the schema.\n"
@@ -96,6 +114,7 @@ def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
         "(events are upcoming or very recent, never years in the past). When the email "
         "states a specific time of day, include it in the deadline as HH:MM:SS; if no "
         "time is given, output the date only (YYYY-MM-DD).\n\n"
+        f"{interest_line}"
         f"Subject: {subject}\n\nBody:\n{clean_body}"
     )
     try:
@@ -118,6 +137,7 @@ def extract_event_intelligence(subject: str, body: str, msg_date: str) -> dict:
             "category": "General",
             "venue": None,
             "tags": [],
+            "interest_tags": [],
             "importance_score": 0.1,
             "raw_summary": "Failed to run AI feature extraction on this email.",
             "links": [],

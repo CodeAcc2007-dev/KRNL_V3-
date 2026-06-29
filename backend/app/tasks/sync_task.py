@@ -12,11 +12,13 @@ from app.services.ingestion import (
     generate_embeddings_batch,
     chunk_text,
     clean_email_body,
+    normalize_interest_tags,
     qdrant_client
 )
 from app.utils.dedup import get_message_id
 from app.services.event_merge import find_matching_event, apply_update
 from app.services.semantic_cache import invalidate_user_cache
+from app.services.interests import fetch_active_catalog, build_catalog_lookup
 from qdrant_client.http import models as qdrant_models
 
 logger = logging.getLogger("uvicorn.error")
@@ -50,7 +52,12 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         if not encrypted_token or not imap_username:
             logger.error(f"Missing credentials for account {account_id}")
             return {"status": "failed", "error": "Missing credentials"}
-            
+
+        # Fetch the interest catalog once per sync run (not per email).
+        catalog = fetch_active_catalog(supabase_service)
+        interest_labels = [c["label"] for c in catalog]
+        catalog_lookup = build_catalog_lookup(catalog)
+
         # 2. Decrypt the encrypted_token
         decrypted_token = decrypt_token(encrypted_token)
         
@@ -108,7 +115,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                 logger.info(f"Processing new email {emails_processed+1}/{target_new}: '{subject}'")
                 
                 # 4a. Run extract_event_intelligence
-                extracted = extract_event_intelligence(subject, body, msg_date)
+                extracted = extract_event_intelligence(subject, body, msg_date, interest_labels)
 
                 # Update merge: if this email updates an event we already have
                 # (reminder, deadline change, venue change, …), merge it into that
@@ -144,6 +151,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                     "venue": extracted.get("venue"),
                     "category": extracted.get("category") or "General",
                     "tags": ", ".join(extracted.get("tags") or []) if isinstance(extracted.get("tags"), list) else (extracted.get("tags") or ""),
+                    "interest_tags": normalize_interest_tags(extracted.get("interest_tags"), catalog_lookup),
                     "importance_score": int((extracted.get("importance_score") or 0.1) * 100),
                     "raw_summary": extracted.get("raw_summary") or "",
                     "full_body": clean_email_body(body),

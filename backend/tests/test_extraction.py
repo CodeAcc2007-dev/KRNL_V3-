@@ -16,3 +16,20 @@ def test_fallback_extraction_includes_update_keys():
         out = ingestion.extract_event_intelligence("subj", "body", "2026-06-22")
     assert out["is_update"] is False
     assert out["update_type"] is None
+
+
+def test_model_exposes_interest_tags():
+    assert "interest_tags" in ingestion.EmailExtractionModel.model_fields
+
+
+def test_fallback_extraction_includes_interest_tags():
+    with patch.object(ingestion.genai_client.models, "generate_content", side_effect=RuntimeError("boom")):
+        out = ingestion.extract_event_intelligence("subj", "body", "2026-06-22")
+    assert out["interest_tags"] == []
+
+
+def test_normalize_interest_tags_maps_to_slugs_and_drops_unknown():
+    lookup = {"hackathons": "hackathons", "research & projects": "research-projects"}
+    out = ingestion.normalize_interest_tags(
+        ["Hackathons", "Research & Projects", "Quidditch", "hackathons"], lookup)
+    assert out == ["hackathons", "research-projects"]  # mapped, deduped, unknown dropped
