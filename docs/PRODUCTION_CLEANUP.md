@@ -58,4 +58,23 @@ Made to test the PWA on a physical phone over the LAN. All must revert/parametri
 | Supabase **Site URL** = `http://192.168.10.9:5173` | Supabase dashboard → Auth → URL Config | OAuth redirect lands back on the phone origin | Revert to real domain; keep only prod redirect URLs |
 | Supabase redirect URLs for LAN IPs | Supabase dashboard | allow OAuth round-trip on LAN | Remove LAN entries before prod |
 
+## Dev-only HTTPS tunnel for phone testing (2026-06-29)
+
+To test PWA install + notifications on a physical phone (both require a secure HTTPS context),
+two `cloudflared` quick tunnels expose the local frontend + backend over HTTPS. **All revert before prod**
+(prod uses a real domain + HTTPS host). Tunnel URLs are **ephemeral** — they change every cloudflared
+restart, so the values below are placeholders for whatever the current session generated.
+
+| What | Where | Why | Action before prod |
+|---|---|---|---|
+| `cloudflared` binary | `~/.local/bin/cloudflared` | local HTTPS tunnels (frontend :4173 + backend :8000) | Dev tool only; not part of the app |
+| `VITE_API_URL` = backend tunnel URL | `frontend/.env` (gitignored) | HTTPS page must call HTTPS API (no mixed content) | Set to real API URL; gitignored so never committed |
+| frontend tunnel URL in `ALLOWED_ORIGINS` | `backend/.env` (gitignored) | CORS for the cross-origin tunnel pair | Lock to real frontend origin; gitignored |
+| frontend served via `vite preview` (prod build) | manual (:4173) | SW registers only in PROD build → needed for install/push | Prod serves static `dist/` from a real host |
+| `--http-host-header localhost:4173` on the frontend tunnel | cloudflared flag | vite 6 preview blocks unknown Host headers | N/A — dev tunnel only |
+| Supabase **Site URL / redirect** = frontend tunnel URL | Supabase dashboard → Auth → URL Config | Google OAuth must redirect back to the tunnel origin | **Remove the tunnel URL**; keep only the real prod domain |
+
+Note: nothing tunnel-specific is committed — both `.env` files are gitignored, so deploys are unaffected.
+The only external state is the Supabase dashboard URL entry, which must be cleaned up manually.
+
 _Add new rows here as work proceeds._
