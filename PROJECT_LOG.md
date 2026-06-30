@@ -26,6 +26,17 @@ at rest.
 
 ## Status at a glance
 
+- **2026-07-01 — Web Push notifications SHIPPED (branch `redesign`, subagent-driven).** Session log:
+  [docs/sessions/2026-07-01-web-push-notifications.md](docs/sessions/2026-07-01-web-push-notifications.md).
+  Three triggers (important-event on sync, 24h deadline reminder, Sun-18:00-IST weekly digest) via one
+  `send_to_user` primitive (prunes dead subs), gated by per-user toggles (`profiles.notification_prefs`).
+  VAPID + `pywebpush`; `sw.js` renders pushes; Settings opt-in. Spec/plan in
+  [docs/superpowers/](docs/superpowers/). 11 tasks, each task-reviewed; final opus review caught + fixed a
+  Critical IST/UTC reminder-window bug (5.5h skew). 85 backend tests pass; frontend builds. **Migration
+  applied in dev Supabase; API+worker(`-B`)+Redis restarted and verified live.** Same session also:
+  21-interest catalog (empty-picker bug was a stale non-`--reload` backend), Important-tab boost-only
+  priority + consequence floor + non-empty top-up, `/events` payload trim. **Next:** real-device push test →
+  deploy (Oracle Free VM / Hostinger VPS).
 - **2026-06-30 — Interests & priority redesign SHIPPED (branch `redesign`, subagent-driven).** Session log:
   [docs/sessions/2026-06-30-interests-priority-redesign.md](docs/sessions/2026-06-30-interests-priority-redesign.md).
   Also: deployment strategy (Oracle Free VM / Hostinger VPS / Railway) + promo brief drafted. Open bug: "page not loading properly" (deferred).

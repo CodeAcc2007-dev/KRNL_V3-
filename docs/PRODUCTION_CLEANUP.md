@@ -87,4 +87,17 @@ Catalog-backed interests + relevance-led priority. Spec/plan in `docs/superpower
 | `toggleInterest` POST not checking `res.ok` | `SettingsScreen.tsx` (+ same pattern in `OnboardingInterests.tsx`) | optimistic save; brief-prescribed try/catch only | Hardening pass: check `res.ok`, revert/notify on failure (low risk — self-corrects on next mount) |
 | ~~Pre-existing AI-reference string~~ | `backend/app/services/ingestion.py` extraction fallback `raw_summary` | violated no-AI-refs rule | ✅ DONE 2026-06-30 — reworded to "Could not extract details from this email." |
 
+## Web Push notifications (2026-07-01)
+
+Spec/plan in `docs/superpowers/`. Shipped on `redesign`.
+
+| What | Where | Why | Action before prod |
+|---|---|---|---|
+| **Manual migration REQUIRED** | `backend/migrations/notifications_migration.sql` | `push_subscriptions` table + `events.notified_at` / `events.deadline_reminded` + `profiles.notification_prefs` | Applied 2026-07-01 in dev Supabase. **Re-run in the production project before deploy.** Until applied the feature degrades safely (no crash; `send_to_user` no-ops) |
+| **`pywebpush` runtime dependency** | `python3 -m pip install --user pywebpush` (no requirements file exists yet) | Web Push delivery + VAPID | This IS a runtime dep (unlike pytest). When a deploy manifest is created, add `pywebpush` (pulls `py-vapid`, `http-ece`) |
+| **VAPID keys in `.env`** | `backend/.env` (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) | sign Web Push; private key is a secret | Generate a fresh pair for prod via `backend/scripts/gen_vapid_keys.py`; move to host secrets; never commit. `VAPID_SUBJECT` currently `mailto:praneshbandiya@gmail.com` |
+| Beat schedule needs `-B` worker | `celery -A app.core.celery_app worker -B` | hourly deadline reminders + Sun-18:00-IST digest only fire with embedded Beat | Same as auto-sync: prod runs worker+beat as managed processes |
+| Settings badge style duplicated ×4 | `SettingsScreen.tsx` notification rows | review Minor (deferred) | Optional cleanup: extract a `badgeStyle(active)` helper |
+| Two Supabase service clients | `sync_task.py` builds its own `create_client`; `notify_task.py` reuses `app.core.security.supabase` | pre-existing inconsistency surfaced during review | Optional consistency cleanup: unify on the shared client |
+
 _Add new rows here as work proceeds._
