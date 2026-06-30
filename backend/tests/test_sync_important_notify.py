@@ -40,3 +40,15 @@ def test_already_notified_event_skips(monkeypatch):
            "importance_score": 90, "interest_tags": [], "notified_at": "2026-06-30T00:00:00Z"}
     assert st.maybe_notify_important(rec, "u1", row, []) is False
     assert sent == []
+
+
+def test_send_failure_is_swallowed_returns_false(monkeypatch):
+    def boom(*a, **k):
+        raise RuntimeError("push transport down")
+    monkeypatch.setattr(st, "send_to_user", boom)
+    rec = Recorder()
+    row = {"id": 10, "user_id": "u1", "display_name": "Fee due", "raw_summary": "pay now",
+           "importance_score": 90, "interest_tags": [], "notified_at": None}
+    # A failed send must not propagate, and must not stamp notified_at.
+    assert st.maybe_notify_important(rec, "u1", row, []) is False
+    assert rec.updated == []
