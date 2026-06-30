@@ -24,6 +24,14 @@ def parse_tags(tags_data) -> List[str]:
 
 IMPORTANT_THRESHOLD = 60.0
 
+# Columns for list endpoints. Omits the large HTML blobs (full_body, raw_body);
+# those are loaded lazily by the single-event detail endpoint when a mail is opened.
+LIST_COLUMNS = (
+    "id,user_id,display_name,deadline,venue,category,tags,interest_tags,"
+    "importance_score,raw_summary,links,has_registration,registration_link,"
+    "created_at,updated_at,deadline_history,last_update_type,email_date"
+)
+
 # Consequence floor (0-100): mail carrying these signals is consequential if ignored
 # (fees, payments, account/admin actions, mandatory deadlines). Floored so it clears the
 # Important bar even when extraction under-rated it. Tunable.
@@ -161,7 +169,7 @@ def get_events(current_user: dict = Depends(get_current_user)):
     user_interests = _get_user_interests(user_id)
 
     try:
-        events_res = supabase.table("events").select("*").eq("user_id", user_id).execute()
+        events_res = supabase.table("events").select(LIST_COLUMNS).eq("user_id", user_id).execute()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -182,7 +190,7 @@ def get_deadlines(current_user: dict = Depends(get_current_user)):
     
     try:
         # Get events where deadline is not null
-        events_res = supabase.table("events").select("*").eq("user_id", user_id).not_.is_("deadline", "null").execute()
+        events_res = supabase.table("events").select(LIST_COLUMNS).eq("user_id", user_id).not_.is_("deadline", "null").execute()
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
