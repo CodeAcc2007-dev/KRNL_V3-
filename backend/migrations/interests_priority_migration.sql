@@ -17,7 +17,17 @@ insert into interest_catalog (slug, label, sort_order) values
     ('workshops-talks',    'Workshops & Talks',    80),
     ('scholarships-funding','Scholarships & Funding',90),
     ('clubs-tech-teams',   'Clubs & Tech Teams',   100),
-    ('entrepreneurship',   'Entrepreneurship',     110)
+    ('entrepreneurship',   'Entrepreneurship',     110),
+    ('ai-ml',              'AI / ML',              120),
+    ('data-science',       'Data Science',         130),
+    ('product-management', 'Product Management',   140),
+    ('consulting',         'Consulting',           150),
+    ('management',         'Management',           160),
+    ('finance',            'Finance',              170),
+    ('photography',        'Photography',          180),
+    ('art-design',         'Art & Design',         190),
+    ('quant-trading',      'Quant / Trading',      200),
+    ('core-engineering',   'Core Engineering',     210)
 on conflict (slug) do nothing;
 
 -- Per-email catalog slugs, written at extraction time.
