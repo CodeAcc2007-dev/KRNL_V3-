@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, HTTPException, status
 from app.core.security import get_current_user, supabase
 from app.core.config import settings
 
@@ -12,10 +12,13 @@ def get_vapid_public_key(current_user: dict = Depends(get_current_user)):
 
 @router.post("/notifications/subscribe")
 def subscribe(payload: dict = Body(...), current_user: dict = Depends(get_current_user)):
+    endpoint = payload.get("endpoint")
+    if not endpoint:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endpoint required")
     keys = payload.get("keys") or {}
     row = {
         "user_id": current_user["user_id"],
-        "endpoint": payload.get("endpoint"),
+        "endpoint": endpoint,
         "p256dh": keys.get("p256dh"),
         "auth": keys.get("auth"),
     }
@@ -26,6 +29,7 @@ def subscribe(payload: dict = Body(...), current_user: dict = Depends(get_curren
 @router.post("/notifications/unsubscribe")
 def unsubscribe(payload: dict = Body(...), current_user: dict = Depends(get_current_user)):
     endpoint = payload.get("endpoint")
-    if endpoint:
-        supabase.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
+    if not endpoint:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="endpoint required")
+    supabase.table("push_subscriptions").delete().eq("endpoint", endpoint).execute()
     return {"status": "unsubscribed"}
