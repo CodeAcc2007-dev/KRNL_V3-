@@ -4,7 +4,7 @@
 // only a fallback when offline. Hashed static assets are cache-first (their
 // filenames change every build, so cached copies never go stale). Bumping
 // CACHE_NAME purges older caches on activate.
-const CACHE_NAME = "krnl-cache-v2";
+const CACHE_NAME = "krnl-cache-v3";
 const PRECACHE = [
   "/",
   "/manifest.json",
@@ -62,5 +62,41 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
     )
+  );
+});
+
+// Web Push: render the notification.
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: "KRNL", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "KRNL";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: data.body || "",
+      icon: "/icons/icon-192x192.png",
+      badge: "/icons/icon-192x192.png",
+      data: { url: data.url || "/" },
+    })
+  );
+});
+
+// Focus an existing tab or open a new one at the notification's url.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((wins) => {
+      for (const w of wins) {
+        if ("focus" in w) {
+          w.navigate(url);
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
   );
 });
