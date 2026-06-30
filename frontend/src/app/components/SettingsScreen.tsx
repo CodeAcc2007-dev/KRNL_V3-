@@ -3,7 +3,7 @@ import { Plus, Mail, AlertTriangle, Shield, Check, LogOut, Trash2, Loader2, Down
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
-import { isPushSupported } from "../utils/push";
+import { isPushSupported, enablePush, disablePush } from "../utils/push";
 
 // Relative "x ago" label from an ISO timestamp.
 function agoLabel(ts?: string | null) {
@@ -277,12 +277,10 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
 
   const toggleMaster = async () => {
     if (!notifPrefs.master) {
-      const { enablePush } = await import("../utils/push");
       const ok = await enablePush();
       if (!ok) return;
       await saveNotifPrefs({ ...notifPrefs, master: true });
     } else {
-      const { disablePush } = await import("../utils/push");
       await disablePush();
       await saveNotifPrefs({ ...notifPrefs, master: false });
     }
