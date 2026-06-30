@@ -8,6 +8,7 @@ router = APIRouter()
 
 # FUTURE_PROOF_HOOK: Custom Tab Configuration
 DEFAULT_TABS = ["Important", "Opportunities", "Announcement", "Academic"]
+DEFAULT_NOTIFICATION_PREFS = {"master": True, "important": True, "reminders": True, "digest": True}
 
 
 def _valid_slugs(requested, catalog) -> list:
@@ -38,7 +39,8 @@ def get_profile(current_user: dict = Depends(get_current_user)):
             roll_number="",
             primary_department="",
             inbox_tabs=DEFAULT_TABS,
-            interest_slugs=[]
+            interest_slugs=[],
+            notification_prefs=DEFAULT_NOTIFICATION_PREFS
         )
     
     profile_data = response.data[0]
@@ -53,7 +55,8 @@ def get_profile(current_user: dict = Depends(get_current_user)):
         roll_number=profile_data.get("roll_number") or "",
         primary_department=profile_data.get("primary_department") or "",
         inbox_tabs=inbox_tabs,
-        interest_slugs=profile_data.get("interest_slugs") or []
+        interest_slugs=profile_data.get("interest_slugs") or [],
+        notification_prefs=profile_data.get("notification_prefs") or DEFAULT_NOTIFICATION_PREFS
     )
 
 @router.post("/profile", response_model=ProfileResponse)
@@ -97,5 +100,6 @@ def update_profile(
         roll_number=profile_data.get("roll_number") or "",
         primary_department=profile_data.get("primary_department") or "",
         inbox_tabs=inbox_tabs,
-        interest_slugs=profile_data.get("interest_slugs") or []
+        interest_slugs=profile_data.get("interest_slugs") or [],
+        notification_prefs=profile_data.get("notification_prefs") or DEFAULT_NOTIFICATION_PREFS
     )

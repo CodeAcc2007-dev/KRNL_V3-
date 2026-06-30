@@ -9,6 +9,7 @@ class ProfileUpdate(BaseModel):
     primary_department: Optional[str] = None
     inbox_tabs: Optional[List[str]] = None
     interest_slugs: Optional[List[str]] = None
+    notification_prefs: Optional[dict] = None
 
 # FUTURE_PROOF_HOOK: Custom Tab Configuration
 class ProfileResponse(BaseModel):
@@ -20,3 +21,6 @@ class ProfileResponse(BaseModel):
         default_factory=lambda: ["Important", "Opportunities", "Announcement", "Academic"]
     )
     interest_slugs: List[str] = Field(default_factory=list)
+    notification_prefs: dict = Field(
+        default_factory=lambda: {"master": True, "important": True, "reminders": True, "digest": True}
+    )
