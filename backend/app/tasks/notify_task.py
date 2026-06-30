@@ -7,23 +7,33 @@ from app.services.push import send_to_user
 
 logger = logging.getLogger("uvicorn.error")
 
+# Deadlines are stored as naive IST wall-clock (see ingestion + Deadlines view),
+# so reminder windows are computed in IST too.
+IST = timezone(timedelta(hours=5, minutes=30))
+
 
 def _parse_deadline(value: str):
+    """Parse a stored deadline into naive IST wall-clock, or None."""
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        dl = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except Exception:
         return None
+    # Any tz-aware value is normalized into IST then made naive; naive values
+    # are already IST wall-clock and used as-is.
+    if dl.tzinfo is not None:
+        dl = dl.astimezone(IST).replace(tzinfo=None)
+    return dl
 
 
 @celery_app.task
 def send_due_reminders() -> dict:
     """Push a one-time reminder for events whose deadline is within the next 24h."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(IST).replace(tzinfo=None)
     horizon = now + timedelta(hours=24)
     try:
         rows = supabase_service.table("events").select(
             "id,user_id,display_name,deadline,deadline_reminded"
-        ).eq("deadline_reminded", False).execute().data or []
+        ).eq("deadline_reminded", False).not_.is_("deadline", "null").execute().data or []
     except Exception as e:
         logger.error(f"reminder query failed: {e}")
         return {"reminded": 0}
@@ -33,8 +43,6 @@ def send_due_reminders() -> dict:
         dl = _parse_deadline(ev.get("deadline") or "")
         if not dl:
             continue
-        if dl.tzinfo is None:
-            dl = dl.replace(tzinfo=timezone.utc)
         if not (now <= dl <= horizon):
             continue
         payload = {"title": "Deadline tomorrow", "body": ev.get("display_name") or "",

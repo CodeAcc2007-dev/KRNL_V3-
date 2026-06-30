@@ -21,22 +21,33 @@ export async function enablePush(): Promise<boolean> {
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return false;
 
-  const reg = await navigator.serviceWorker.ready;
-  const keyRes = await apiFetch("/api/v1/notifications/vapid-public-key");
-  if (!keyRes.ok) return false;
-  const { key } = await keyRes.json();
-  if (!key) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const keyRes = await apiFetch("/api/v1/notifications/vapid-public-key");
+    if (!keyRes.ok) return false;
+    const { key } = await keyRes.json();
+    if (!key) return false;
 
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(key),
-  });
+    // Drop any prior subscription first: re-subscribing with a different
+    // application server key (e.g. rotated VAPID key, or a stale install)
+    // rejects with InvalidStateError otherwise.
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) await existing.unsubscribe();
 
-  const res = await apiFetch("/api/v1/notifications/subscribe", {
-    method: "POST",
-    body: JSON.stringify(sub.toJSON()),
-  });
-  return res.ok;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(key),
+    });
+
+    const res = await apiFetch("/api/v1/notifications/subscribe", {
+      method: "POST",
+      body: JSON.stringify(sub.toJSON()),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("Failed to enable push:", err);
+    return false;
+  }
 }
 
 export async function disablePush(): Promise<void> {
