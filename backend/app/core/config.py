@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     QDRANT_URL: str
     QDRANT_API_KEY: str
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:admin@example.com"
 
     model_config = SettingsConfigDict(
         env_file=".env",
