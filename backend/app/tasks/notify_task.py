@@ -48,3 +48,25 @@ def send_due_reminders() -> dict:
             logger.warning(f"reminder send failed for event {ev['id']}: {e}")
     logger.info(f"Deadline reminders sent: {reminded}")
     return {"reminded": reminded}
+
+
+@celery_app.task
+def send_weekly_digest() -> dict:
+    """One weekly catch-up push per subscribed user."""
+    try:
+        subs = supabase_service.table("push_subscriptions").select("user_id").execute().data or []
+    except Exception as e:
+        logger.error(f"digest subscriber query failed: {e}")
+        return {"users": 0}
+
+    user_ids = {s["user_id"] for s in subs if s.get("user_id")}
+    for uid in user_ids:
+        payload = {"title": "Your week in KRNL",
+                   "body": "Catch up on this week's important mail and deadlines.",
+                   "url": "/"}
+        try:
+            send_to_user(supabase_service, uid, payload, "digest")
+        except Exception as e:
+            logger.warning(f"digest send failed for {uid}: {e}")
+    logger.info(f"Weekly digest sent to {len(user_ids)} user(s).")
+    return {"users": len(user_ids)}
