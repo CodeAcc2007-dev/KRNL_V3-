@@ -189,25 +189,46 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
     announcements: ["general", "security"],
   };
 
-  const filteredEvents = events.filter((ev) => {
-    const tabLower = activeFilter.toLowerCase();
-    if (tabLower === "all") {
-      return true;
-    }
-    if (tabLower === "important") {
-      // Mail the priority score marks important (shared threshold with notifications)
-      return ev.personalized_priority && ev.personalized_priority >= 60;
-    }
-    const cats = tabCategories[tabLower] || [tabLower];
-    return ev.category && cats.includes(ev.category.toLowerCase());
-  });
+  const tabLower = activeFilter.toLowerCase();
 
-  // Sort by latest email first (email_date, falling back to ingest time).
-  const sortedEvents = [...filteredEvents].sort(
-    (a, b) =>
-      new Date(b.email_date || b.created_at || 0).getTime() -
-      new Date(a.email_date || a.created_at || 0).getTime()
-  );
+  // Important tab: a priority-ranked feed that stays alive. Show everything genuinely
+  // important (>=60); if fewer than IMPORTANT_MIN, top up with the next-highest mail
+  // (above FILLER_FLOOR so true junk never appears) so the tab doesn't read as eerily empty.
+  const IMPORTANT_MIN = 5;
+  const FILLER_FLOOR = 25;
+
+  let sortedEvents: typeof events;
+  if (tabLower === "important") {
+    const ranked = [...events].sort(
+      (a, b) => (b.personalized_priority ?? 0) - (a.personalized_priority ?? 0)
+    );
+    const core = ranked.filter((e) => (e.personalized_priority ?? 0) >= 60);
+    sortedEvents =
+      core.length >= IMPORTANT_MIN
+        ? core
+        : [
+            ...core,
+            ...ranked.filter(
+              (e) =>
+                (e.personalized_priority ?? 0) < 60 &&
+                (e.personalized_priority ?? 0) > FILLER_FLOOR
+            ),
+          ].slice(0, IMPORTANT_MIN);
+  } else {
+    const filteredEvents = events.filter((ev) => {
+      if (tabLower === "all") {
+        return true;
+      }
+      const cats = tabCategories[tabLower] || [tabLower];
+      return ev.category && cats.includes(ev.category.toLowerCase());
+    });
+    // Sort by latest email first (email_date, falling back to ingest time).
+    sortedEvents = [...filteredEvents].sort(
+      (a, b) =>
+        new Date(b.email_date || b.created_at || 0).getTime() -
+        new Date(a.email_date || a.created_at || 0).getTime()
+    );
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ background: "var(--bg)" }}>

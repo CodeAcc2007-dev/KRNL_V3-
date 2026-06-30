@@ -44,12 +44,12 @@ def test_maps_core_fields_verbatim():
 
 
 def test_priority_uses_interest_overlap():
-    # importance 0.8 -> 80; one interest_tag match -> 0.4*80 + 0.6*60 = 68
+    # boost-only: importance 0.8 -> 80 dominates a single-match blend (68), so stays 80
     matched = _to_event_response(SAMPLE_ROW, ["hackathons"])
-    assert matched.personalized_priority == 68.0
-    # interests set but no overlap -> 0.4*80 = 32
+    assert matched.personalized_priority == 80.0
+    # interests set but no overlap -> importance is never demoted -> 80
     miss = _to_event_response(SAMPLE_ROW, ["finance"])
-    assert miss.personalized_priority == 32.0
+    assert miss.personalized_priority == 80.0
     # no interests selected -> importance only -> 80
     none = _to_event_response(SAMPLE_ROW, [])
     assert none.personalized_priority == 80.0

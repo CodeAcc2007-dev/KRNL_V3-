@@ -24,6 +24,22 @@ def parse_tags(tags_data) -> List[str]:
 
 IMPORTANT_THRESHOLD = 60.0
 
+# Consequence floor (0-100): mail carrying these signals is consequential if ignored
+# (fees, payments, account/admin actions, mandatory deadlines). Floored so it clears the
+# Important bar even when extraction under-rated it. Tunable.
+CONSEQUENCE_FLOOR = 75.0
+CONSEQUENCE_SIGNALS = (
+    "fee", "payment", "due", "dues", "fine", "penalty", "overdue",
+    "account", "deactivat", "blacklist", "mandatory", "last date",
+    "registration deadline",
+)
+
+
+def _has_consequence(event: dict) -> bool:
+    """True if the email's name/summary carries a consequence signal."""
+    text = f"{event.get('display_name') or ''} {event.get('raw_summary') or ''}".lower()
+    return any(sig in text for sig in CONSEQUENCE_SIGNALS)
+
 
 def _grade_relevance(match_count: int) -> float:
     """Graded interest overlap: 0 -> 0, 1 -> 60, 2+ -> 100."""
@@ -36,14 +52,17 @@ def _grade_relevance(match_count: int) -> float:
 
 def calculate_priority(event: dict, user_interests: List[str]) -> float:
     """
-    Personalized priority (0-100), relevance-led blend.
-    importance = importance_score scaled to 0-100.
-    If the user has interests: 0.4*importance + 0.6*relevance.
-    If not: importance only (graceful fallback).
+    Personalized priority (0-100), boost-only: interests promote, never demote.
+    importance = importance_score scaled to 0-100, floored for consequential mail.
+    With interests: max(importance, 0.4*importance + 0.6*relevance).
+    Without: importance only (graceful fallback).
     """
     importance = float(event.get("importance_score") or 0.0)
     importance = importance * 100.0 if importance <= 1.0 else importance
     importance = min(importance, 100.0)
+
+    if _has_consequence(event):
+        importance = max(importance, CONSEQUENCE_FLOOR)
 
     if not user_interests:
         return round(importance, 1)
@@ -51,7 +70,8 @@ def calculate_priority(event: dict, user_interests: List[str]) -> float:
     event_slugs = {s.lower() for s in parse_tags(event.get("interest_tags"))}
     interest_set = {s.lower() for s in user_interests}
     relevance = _grade_relevance(len(event_slugs & interest_set))
-    return round(min(0.4 * importance + 0.6 * relevance, 100.0), 1)
+    blend = 0.4 * importance + 0.6 * relevance
+    return round(min(max(importance, blend), 100.0), 1)
 
 def get_urgency_label(deadline_str: str) -> str:
     """
