@@ -8,11 +8,14 @@ class FakeQuery:
     def select(self, *a, **k): return self
     def eq(self, c, v): self._rows = [r for r in self._rows if r.get(c) == v]; return self
     def update(self, data): self._upd = data; return self
-    def execute(self): return SimpleNamespace(data=self._rows)
+    def execute(self):
+        if self._upd is not None:
+            self.store.updates.append(self._upd)
+        return SimpleNamespace(data=self._rows)
 
 
 class FakeSupabase:
-    def __init__(self, rows): self.rows = rows
+    def __init__(self, rows): self.rows, self.updates = rows, []
     def table(self, name): return FakeQuery(self.rows, self)
 
 
@@ -26,7 +29,9 @@ def test_reminds_events_within_24h(monkeypatch):
     sent = []
     monkeypatch.setattr(nt, "send_to_user", lambda c, uid, p, kind: sent.append((id(c), kind)))
     rows = [_ev(1, 10, False), _ev(2, 40, False), _ev(3, 5, True)]
-    monkeypatch.setattr(nt, "supabase_service", FakeSupabase(rows))
+    fake = FakeSupabase(rows)
+    monkeypatch.setattr(nt, "supabase_service", fake)
     out = nt.send_due_reminders()
     assert out["reminded"] == 1  # only event 1 (within 24h, not yet reminded)
     assert sent and sent[0][1] == "reminders"
+    assert fake.updates == [{"deadline_reminded": True}]  # flag stamped exactly once

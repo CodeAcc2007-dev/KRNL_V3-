@@ -1,14 +1,11 @@
 """Scheduled notification tasks: 24h deadline reminders and the weekly digest."""
 import logging
 from datetime import datetime, timezone, timedelta
-from supabase import create_client
 from app.core.celery_app import celery_app
-from app.core.config import settings
+from app.core.security import supabase as supabase_service
 from app.services.push import send_to_user
 
 logger = logging.getLogger("uvicorn.error")
-
-supabase_service = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
 
 
 def _parse_deadline(value: str):
