@@ -1,8 +1,10 @@
 import time
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from app.core.celery_app import celery_app
+from app.services.push import send_to_user
+from app.api.v1.endpoints.events import calculate_priority, IMPORTANT_THRESHOLD
 from imap_tools import MailBox
 from supabase import create_client
 from app.core.config import settings
@@ -22,6 +24,29 @@ from app.services.interests import fetch_active_catalog, build_catalog_lookup
 from qdrant_client.http import models as qdrant_models
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def maybe_notify_important(client, user_id, event_row, interest_slugs) -> bool:
+    """Push a notification for a newly-ingested important event, once. Returns whether it pushed."""
+    if event_row.get("notified_at"):
+        return False
+    priority = calculate_priority(event_row, interest_slugs)
+    if priority < IMPORTANT_THRESHOLD:
+        return False
+    payload = {
+        "title": event_row.get("display_name") or "New important mail",
+        "body": (event_row.get("raw_summary") or "")[:140],
+        "url": f"/?event={event_row.get('id')}",
+    }
+    try:
+        send_to_user(client, user_id, payload, "important")
+        client.table("events").update(
+            {"notified_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", event_row["id"]).execute()
+    except Exception:
+        return False
+    return True
+
 
 # Initialize service client for tasks bypass
 supabase_service = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
@@ -57,6 +82,12 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         catalog = fetch_active_catalog(supabase_service)
         interest_labels = [c["label"] for c in catalog]
         catalog_lookup = build_catalog_lookup(catalog)
+
+        try:
+            prof = supabase_service.table("profiles").select("interest_slugs").eq("id", user_id).execute()
+            user_interest_slugs = (prof.data[0].get("interest_slugs") or []) if prof.data else []
+        except Exception:
+            user_interest_slugs = []
 
         # 2. Decrypt the encrypted_token
         decrypted_token = decrypt_token(encrypted_token)
@@ -166,6 +197,8 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
                     event_response = supabase_service.table("events").insert(event_data).execute()
                     if event_response.data:
                         event_id = event_response.data[0]["id"]
+                        notify_row = {**event_data, "id": event_id, "notified_at": None}
+                        maybe_notify_important(supabase_service, user_id, notify_row, user_interest_slugs)
                     else:
                         logger.error("Failed to insert event into database (empty return)")
                         continue
