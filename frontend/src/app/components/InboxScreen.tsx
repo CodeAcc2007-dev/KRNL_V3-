@@ -18,6 +18,7 @@ interface EventItem {
   tags?: string[];
   importance_score: number;
   raw_summary?: string;
+  links?: string[];
   created_at?: string;
   email_date?: string;
   personalized_priority?: number;
@@ -451,6 +452,8 @@ export function InboxScreen({ onOpenSettings }: InboxScreenProps) {
                       importance_score: selectedEvent.importance_score,
                       personalized_priority: selectedEvent.personalized_priority,
                       deadline: selectedEvent.deadline,
+                      venue: selectedEvent.venue,
+                      links: selectedEvent.links,
                       created_at: selectedEvent.created_at,
                     }
                   : undefined

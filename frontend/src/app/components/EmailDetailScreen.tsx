@@ -84,6 +84,8 @@ interface EmailDetailScreenProps {
     importance_score: number;
     personalized_priority?: number;
     deadline?: string;
+    venue?: string;
+    links?: string[];
     created_at?: string;
   };
   onBack: () => void;
@@ -135,6 +137,8 @@ export function EmailDetailScreen({ eventId, previewData, onBack, direction = "r
             importance_score: previewData.importance_score,
             personalized_priority: previewData.personalized_priority,
             deadline: previewData.deadline,
+            venue: previewData.venue,
+            links: previewData.links,
             created_at: previewData.created_at,
           });
         }
@@ -203,6 +207,8 @@ export function EmailDetailScreen({ eventId, previewData, onBack, direction = "r
         importance_score: previewData.importance_score,
         personalized_priority: previewData.personalized_priority,
         deadline: previewData.deadline,
+        venue: previewData.venue,
+        links: previewData.links,
         created_at: previewData.created_at,
       }
     : null);
