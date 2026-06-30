@@ -55,6 +55,16 @@ def test_type_off_sends_nothing(monkeypatch):
     assert n == 0 and sent == []
 
 
+def test_no_vapid_key_sends_nothing(monkeypatch):
+    monkeypatch.setattr(push.settings, "VAPID_PRIVATE_KEY", "")
+    sent = []
+    monkeypatch.setattr(push, "_send_one", lambda s, p: sent.append(s))
+    store = _store({"master": True, "important": True},
+                   [{"id": 1, "user_id": "u1", "endpoint": "e1", "p256dh": "x", "auth": "y"}])
+    n = push.send_to_user(FakeSupabase(store), "u1", {"title": "t", "body": "b", "url": "/"}, "important")
+    assert n == 0 and sent == []
+
+
 def test_sends_to_all_subscriptions(monkeypatch):
     sent = []
     monkeypatch.setattr(push, "_send_one", lambda s, p: sent.append(s["endpoint"]))

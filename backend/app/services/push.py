@@ -55,8 +55,8 @@ def send_to_user(client, user_id: str, payload: dict, kind: str) -> int:
             if code in (404, 410):
                 try:
                     client.table("push_subscriptions").delete().eq("endpoint", sub["endpoint"]).execute()
-                except Exception:
-                    pass
+                except Exception as del_err:
+                    logger.warning(f"failed to prune dead subscription: {del_err}")
             else:
                 logger.warning(f"push failed (endpoint kept): {e}")
         except Exception as e:
