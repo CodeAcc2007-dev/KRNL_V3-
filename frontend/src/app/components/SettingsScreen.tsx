@@ -3,6 +3,7 @@ import { Plus, Mail, AlertTriangle, Shield, Check, LogOut, Trash2, Loader2, Down
 import { motion, AnimatePresence } from "motion/react";
 import { supabase } from "../utils/supabase";
 import { apiFetch } from "../utils/api";
+import { isPushSupported } from "../utils/push";
 
 // Relative "x ago" label from an ISO timestamp.
 function agoLabel(ts?: string | null) {
@@ -52,6 +53,9 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
   const [showDangerConfirm, setShowDangerConfirm] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [notifPrefs, setNotifPrefs] = useState<{ master: boolean; important: boolean; reminders: boolean; digest: boolean }>(
+    { master: false, important: true, reminders: true, digest: true }
+  );
 
   // Deletion and Portability States
   const [exporting, setExporting] = useState(false);
@@ -108,6 +112,7 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
       if (profRes.ok) {
         const prof = await profRes.json();
         setSelectedSlugs(prof.interest_slugs || []);
+        if (prof.notification_prefs) setNotifPrefs((p) => ({ ...p, ...prof.notification_prefs }));
       }
     } catch (err) {
       console.error("Error loading interests:", err);
@@ -257,6 +262,34 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
       console.error("Error saving interests:", err);
     }
   };
+
+  const saveNotifPrefs = async (next: typeof notifPrefs) => {
+    setNotifPrefs(next);
+    try {
+      await apiFetch("/api/v1/profile", {
+        method: "POST",
+        body: JSON.stringify({ notification_prefs: next }),
+      });
+    } catch (err) {
+      console.error("Error saving notification prefs:", err);
+    }
+  };
+
+  const toggleMaster = async () => {
+    if (!notifPrefs.master) {
+      const { enablePush } = await import("../utils/push");
+      const ok = await enablePush();
+      if (!ok) return;
+      await saveNotifPrefs({ ...notifPrefs, master: true });
+    } else {
+      const { disablePush } = await import("../utils/push");
+      await disablePush();
+      await saveNotifPrefs({ ...notifPrefs, master: false });
+    }
+  };
+
+  const toggleType = (key: "important" | "reminders" | "digest") =>
+    saveNotifPrefs({ ...notifPrefs, [key]: !notifPrefs[key] });
 
   const handleDeleteAccount = async (accountId: number) => {
     setConfirmDeleteAccountId(accountId);
@@ -505,6 +538,95 @@ export function SettingsScreen({ canInstall = false, onInstall }: { canInstall?:
             </div>
           </div>
         </div>
+
+        {/* ─── Notifications ─── */}
+        {isPushSupported() && (
+          <div className="mb-6">
+            <span style={sectionLabel} className="block mb-2.5">Notifications</span>
+            <div style={groupCard}>
+              <button
+                onClick={toggleMaster}
+                className="w-full flex items-center justify-between px-4 py-3"
+                style={rowDivider(!notifPrefs.master)}
+              >
+                <span style={{ color: "var(--text)", fontSize: 13.5, fontWeight: 500 }}>Push notifications</span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: notifPrefs.master ? "var(--accent)" : "var(--text-3)",
+                    background: notifPrefs.master ? "var(--accent-weak)" : "var(--surface-2, var(--border))",
+                    borderRadius: 6,
+                    padding: "2px 8px",
+                  }}
+                >
+                  {notifPrefs.master ? "On" : "Off"}
+                </span>
+              </button>
+              {notifPrefs.master && (
+                <>
+                  <button
+                    onClick={() => toggleType("important")}
+                    className="w-full flex items-center justify-between px-4 py-3"
+                    style={rowDivider(false)}
+                  >
+                    <span style={{ color: "var(--text)", fontSize: 13.5 }}>Important mail</span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: notifPrefs.important ? "var(--accent)" : "var(--text-3)",
+                        background: notifPrefs.important ? "var(--accent-weak)" : "var(--surface-2, var(--border))",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {notifPrefs.important ? "On" : "Off"}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => toggleType("reminders")}
+                    className="w-full flex items-center justify-between px-4 py-3"
+                    style={rowDivider(false)}
+                  >
+                    <span style={{ color: "var(--text)", fontSize: 13.5 }}>Deadline reminders</span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: notifPrefs.reminders ? "var(--accent)" : "var(--text-3)",
+                        background: notifPrefs.reminders ? "var(--accent-weak)" : "var(--surface-2, var(--border))",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {notifPrefs.reminders ? "On" : "Off"}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => toggleType("digest")}
+                    className="w-full flex items-center justify-between px-4 py-3"
+                    style={rowDivider(true)}
+                  >
+                    <span style={{ color: "var(--text)", fontSize: 13.5 }}>Weekly digest</span>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: notifPrefs.digest ? "var(--accent)" : "var(--text-3)",
+                        background: notifPrefs.digest ? "var(--accent-weak)" : "var(--surface-2, var(--border))",
+                        borderRadius: 6,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {notifPrefs.digest ? "On" : "Off"}
+                    </span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* ─── App (install) ─── */}
         {canInstall && (
