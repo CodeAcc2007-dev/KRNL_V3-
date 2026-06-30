@@ -26,7 +26,9 @@ at rest.
 
 ## Status at a glance
 
-- **2026-06-30 — Interests & priority redesign SHIPPED (branch `redesign`, subagent-driven).**
+- **2026-06-30 — Interests & priority redesign SHIPPED (branch `redesign`, subagent-driven).** Session log:
+  [docs/sessions/2026-06-30-interests-priority-redesign.md](docs/sessions/2026-06-30-interests-priority-redesign.md).
+  Also: deployment strategy (Oracle Free VM / Hostinger VPS / Railway) + promo brief drafted. Open bug: "page not loading properly" (deferred).
   Spec + plan in [docs/superpowers/](docs/superpowers/). DB-backed `interest_catalog` (11 seed fields)
   feeds both extraction and a new Settings/onboarding multi-select; extraction tags each email
   (`events.interest_tags`); `calculate_priority` is now a relevance-led blend
