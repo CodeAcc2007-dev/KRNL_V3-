@@ -1,29 +1,79 @@
-# KRNL V3 — Deployment runbook (Oracle Free VM + Vercel)
+# KRNL V3 — Deployment runbook (Railway + Vercel; Oracle VM alternative)
 
-Target: **backend** (API + Celery worker/beat + Redis) on an Oracle Cloud always-free VM
-behind Caddy (auto HTTPS); **frontend** (Vite PWA) on Vercel. Supabase + Qdrant + Gemini stay
-as the existing cloud services (the dev migrations are already applied, so we reuse the same
-Supabase project to start — split to a separate prod project later if desired).
+**Backend** = API + Celery worker/beat + Redis. **Frontend** = the Vite PWA on **Vercel**
+(free, no card). Supabase + Qdrant + Gemini stay as the existing cloud services (dev migrations
+already applied, so we reuse the same Supabase project to start).
+
+Two backend options — do **one**:
+
+- **Railway (primary, section R)** — managed; Railway supplies HTTPS + a domain automatically,
+  so no VM/firewall/DNS/Caddy. Cost: ~$5 trial credit, then ~$5/mo once the 24/7 worker uses it.
+- **Oracle Free VM (alternative, sections A–C)** — $0 forever but more setup; needs Caddy +
+  DuckDNS for HTTPS. Use this if you want zero cost and Oracle lets you create an account.
+
+**Sections D (Vercel), E (Supabase), F (Verify) are shared by both.**
 
 ```
- phone / browser
-      │ HTTPS
-      ▼
- Vercel  ──(VITE_API_URL)──►  https://api.<you>.duckdns.org  (Caddy :443)
- frontend                          │ reverse_proxy
-                                   ▼
-                              api (uvicorn :8000) ──┐
-                              worker (celery -B)  ──┼──► redis
-                                                     └──► Supabase / Qdrant / Gemini (cloud)
+ phone / browser ──HTTPS──►  Vercel frontend ──(VITE_API_URL)──►  backend (Railway or Oracle)
+                                                                    ├─ api (uvicorn)
+                                                                    ├─ worker (celery -B)
+                                                                    └─ redis   → Supabase/Qdrant/Gemini
 ```
 
-Repo artifacts already created: `backend/Dockerfile`, `backend/requirements.txt`,
+Repo artifacts: `backend/Dockerfile` (binds `$PORT`), `backend/requirements.txt`,
 `backend/.dockerignore`, `backend/.env.example`, `docker-compose.prod.yml`, `Caddyfile`,
 `frontend/vercel.json`.
 
 ---
 
-## A. Oracle Cloud — provision the VM
+## R. Railway — backend (primary)
+
+Railway builds directly from `backend/Dockerfile`. You create **three components** in one
+project, all in the same repo.
+
+1. <https://railway.app> → sign in with GitHub → **New Project → Deploy from GitHub repo** →
+   pick this repo, branch `redesign`.
+2. **Redis:** in the project, **New → Database → Add Redis.** Railway exposes it as
+   `${{Redis.REDIS_URL}}` to other services (used below).
+3. **Web service (API):**
+   - It should auto-create from the repo. Open its **Settings → Root Directory = `backend`**
+     (so it finds the Dockerfile). Build = Dockerfile (auto-detected).
+   - **Networking → Generate Domain.** This is your public HTTPS API URL, e.g.
+     `https://krnl-api.up.railway.app` → becomes `VITE_API_URL` on Vercel.
+   - Leave the start command as the Dockerfile default (uvicorn binds Railway's `$PORT`).
+4. **Worker service:** **New → GitHub Repo → same repo.** Settings:
+   - **Root Directory = `backend`** (same Dockerfile).
+   - **Custom Start Command:**
+     `celery -A app.core.celery_app worker --concurrency=1 -B --loglevel=info`
+   - No domain (it's a background process).
+5. **Variables** — set on **both** the web and worker services (Railway → service → Variables).
+   Use the same values as your dev `backend/.env`, **unquoted**:
+   ```
+   DEBUG=False
+   ENCRYPTION_KEY=...
+   SUPABASE_URL=...
+   SUPABASE_ANON_KEY=...
+   SUPABASE_SERVICE_ROLE_KEY=...
+   QDRANT_URL=...
+   QDRANT_API_KEY=...
+   GEMINI_API_KEY=...
+   REDIS_URL=${{Redis.REDIS_URL}}
+   ALLOWED_ORIGINS=["https://<your-app>.vercel.app"]
+   VAPID_PUBLIC_KEY=...
+   VAPID_PRIVATE_KEY=...
+   VAPID_SUBJECT=mailto:you@example.com
+   ```
+   - `REDIS_URL=${{Redis.REDIS_URL}}` wires both services to the Railway Redis.
+   - Generate **fresh** VAPID keys for prod: `python backend/scripts/gen_vapid_keys.py`.
+   - Fill `ALLOWED_ORIGINS` after section D (redeploy the web service once you have the Vercel URL).
+6. Deploy. Smoke test: `curl https://<web-domain>/api/v1/notifications/vapid-public-key`
+   (401 = reached the app through TLS; route is auth-gated). Then go to **section D**.
+
+> Skip sections A–C (they are the Oracle alternative). Continue at **section D**.
+
+---
+
+## A. Oracle Cloud — provision the VM  *(alternative to Railway; skip if using Railway)*
 
 1. Create an Oracle Cloud account (free; a card is required for identity verification only —
    it is **not charged** on always-free shapes). At signup pick **home region = India West

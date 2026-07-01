@@ -13,5 +13,6 @@ COPY . .
 
 EXPOSE 8000
 
-# API process. The worker process overrides this command in docker-compose.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# API process. Binds $PORT when the platform injects one (Railway), else 8000 (compose/VM).
+# The worker process overrides this command in docker-compose / on Railway.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'"]
