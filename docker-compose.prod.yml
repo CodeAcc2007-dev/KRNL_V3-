@@ -1,0 +1,53 @@
+# Production stack for the Oracle Free VM: API + Celery worker(+beat) + Redis + Caddy (HTTPS).
+# Supabase (Postgres) and Qdrant stay external/cloud — only their URLs/keys go in backend/.env.
+#
+#   Root .env (next to this file) must define BACKEND_DOMAIN, e.g.
+#     BACKEND_DOMAIN=api.your-name.duckdns.org
+#   backend/.env holds the app secrets (copy from backend/.env.example) and must set
+#     REDIS_URL=redis://redis:6379/0   (the compose service name, not localhost)
+#
+#   Bring up:  docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    depends_on:
+      - redis
+    expose:
+      - "8000"
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    depends_on:
+      - redis
+    command: celery -A app.core.celery_app worker --concurrency=1 -B --loglevel=info
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      BACKEND_DOMAIN: ${BACKEND_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - api
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:

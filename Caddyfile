@@ -1,0 +1,7 @@
+# Caddy auto-provisions a Let's Encrypt TLS cert for BACKEND_DOMAIN and reverse-proxies
+# HTTPS traffic to the api container. Requires BACKEND_DOMAIN to resolve to this VM's
+# public IP and ports 80/443 to be open (Oracle Security List + the instance firewall).
+
+{$BACKEND_DOMAIN} {
+	reverse_proxy api:8000
+}
