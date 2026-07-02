@@ -6,6 +6,7 @@ from app.core.celery_app import celery_app
 from app.services.push import send_to_user
 from app.api.v1.endpoints.events import calculate_priority, IMPORTANT_THRESHOLD
 from imap_tools import MailBox
+from app.core.imap_ssl import imap_ssl_context
 from supabase import create_client
 from app.core.config import settings
 from app.core.encryption import decrypt_token
@@ -102,7 +103,7 @@ def run_email_sync(self, user_id: str, account_id: int, max_emails: int = 10):
         target_new = max_emails
         scan_limit = max(target_new * 6, 60)
                 
-        with MailBox('imap.iitb.ac.in').login(imap_username, decrypted_token, 'INBOX') as mailbox:
+        with MailBox('imap.iitb.ac.in', ssl_context=imap_ssl_context()).login(imap_username, decrypted_token, 'INBOX') as mailbox:
             messages = list(mailbox.fetch('ALL', reverse=True, limit=scan_limit))
                 
             logger.info(f"Found {len(messages)} emails fetched.")

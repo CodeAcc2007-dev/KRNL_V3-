@@ -1,5 +1,7 @@
 from imap_tools import MailBox
 
+from app.core.imap_ssl import imap_ssl_context
+
 def verify_imap_connection(username: str, token: str) -> bool:
     """
     Synchronously tests connection and login credentials on the IIT Bombay IMAP server.
@@ -7,7 +9,7 @@ def verify_imap_connection(username: str, token: str) -> bool:
     """
     try:
         # Using context manager ensures connection sockets are closed cleanly
-        with MailBox('imap.iitb.ac.in') as mailbox:
+        with MailBox('imap.iitb.ac.in', ssl_context=imap_ssl_context()) as mailbox:
             mailbox.login(username, token, 'INBOX')
         return True
     except Exception as e:
